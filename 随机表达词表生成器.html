@@ -1,0 +1,1778 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>随机表达词汇生成器</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>词</text></svg>">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg-deep: #141824; --bg-card: #1c2133; --bg-card-2: #232942; --bg-input: #11141f;
+  --accent: #e0a84a; --accent-dim: rgba(224,168,74,.12); --accent-glow: rgba(224,168,74,.3);
+  --accent-2: #7eb8da; --accent-2-dim: rgba(126,184,218,.12);
+  --accent-3: #8cc48c; --accent-3-dim: rgba(140,196,140,.12);
+  --text-primary: #ece8dd; --text-secondary: #9a9eb5; --text-muted: #5f6378;
+  --border: rgba(255,255,255,.07); --border-accent: rgba(224,168,74,.3);
+  --radius: 14px; --radius-sm: 8px;
+  --font-serif: 'Noto Serif SC','Songti SC','SimSun',serif;
+  --font-sans: 'Noto Sans SC',-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+}
+html,body { font-family: var(--font-sans); background: var(--bg-deep); color: var(--text-primary); min-height:100vh; line-height:1.7; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
+body::before { content:''; position:fixed; inset:0; background: radial-gradient(ellipse 80% 50% at 50% -20%,rgba(224,168,74,.07),transparent), radial-gradient(ellipse 50% 40% at 90% 90%,rgba(126,184,218,.05),transparent); pointer-events:none; z-index:0; }
+
+.view { display:none; min-height:100vh; position:relative; z-index:1; animation:fadeIn .3s ease; }
+.view.active { display:flex; flex-direction:column; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.container { width:100%; max-width:560px; margin:0 auto; padding:28px 20px 40px; flex:1; display:flex; flex-direction:column; }
+
+.top-bar { display:flex; align-items:center; gap:12px; margin-bottom:24px; }
+.back-btn { width:36px; height:36px; border-radius:50%; border:1px solid var(--border); background:var(--bg-card); color:var(--text-secondary); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .2s; flex-shrink:0; font-family:serif; }
+.back-btn:hover { color:var(--text-primary); border-color:var(--text-muted); }
+.top-title { font-family:var(--font-serif); font-size:18px; font-weight:600; letter-spacing:.05em; }
+
+/* ===== 首页 ===== */
+.home-header { text-align:center; padding:40px 0 48px; }
+.home-header h1 { font-family:var(--font-serif); font-size:clamp(30px,8vw,42px); font-weight:900; letter-spacing:.1em; margin-bottom:10px; }
+.home-header h1 .dot { color:var(--accent); }
+.home-header p { font-size:13px; color:var(--text-secondary); letter-spacing:.05em; }
+.home-actions { display:flex; gap:14px; margin-bottom:36px; }
+.home-card { flex:1; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:28px 16px; text-align:center; cursor:pointer; transition:all .25s; position:relative; overflow:hidden; }
+.home-card::before { content:''; position:absolute; top:0;left:0;right:0; height:3px; background:var(--accent); transform:scaleX(0); transition:transform .3s; }
+.home-card:hover { border-color:var(--border-accent); transform:translateY(-3px); box-shadow:0 8px 30px rgba(0,0,0,.3); }
+.home-card:hover::before { transform:scaleX(1); }
+.home-card.card-2::before { background:var(--accent-2); }
+.home-card.card-2:hover { border-color:rgba(126,184,218,.3); }
+.home-card.card-3::before { background:var(--accent-3); }
+.home-card.card-3:hover { border-color:rgba(140,196,140,.3); }
+.home-card .card-icon { font-family:var(--font-serif); font-size:34px; font-weight:700; color:var(--accent); margin-bottom:12px; }
+.home-card.card-2 .card-icon { color:var(--accent-2); }
+.home-card.card-3 .card-icon { color:var(--accent-3); }
+.home-card .card-name { font-family:var(--font-serif); font-size:16px; font-weight:600; margin-bottom:6px; letter-spacing:.05em; }
+.home-card .card-desc { font-size:12px; color:var(--text-muted); line-height:1.6; }
+
+.home-history { margin-top:auto; }
+.home-history .h-title { font-size:12px; color:var(--text-muted); letter-spacing:.12em; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.home-history .h-title .line { flex:1; height:1px; background:var(--border); }
+.history-tags { display:flex; flex-wrap:wrap; gap:6px; }
+.history-tag { font-family:var(--font-serif); font-size:12px; padding:4px 10px; border-radius:12px; background:var(--bg-card); border:1px solid var(--border); color:var(--text-secondary); cursor:pointer; transition:all .15s; }
+.history-tag:hover { color:var(--accent); border-color:var(--border-accent); }
+.history-tag .ht-time { font-size:10px; color:var(--text-muted); margin-left:5px; font-family:var(--font-sans); }
+
+/* ===== 主题选择 ===== */
+.topic-section { margin-bottom:24px; }
+.topic-label { font-size:12px; color:var(--text-muted); letter-spacing:.12em; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.topic-label .line { flex:1; height:1px; background:var(--border); }
+.major-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.major-btn { font-family:var(--font-serif); font-size:14px; padding:14px 8px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg-input); color:var(--text-secondary); cursor:pointer; transition:all .2s; letter-spacing:.05em; text-align:center; }
+.major-btn:hover { color:var(--text-primary); border-color:var(--text-muted); }
+.major-btn.active { background:var(--accent); color:#1a1a1a; border-color:var(--accent); font-weight:600; }
+.sub-list { display:flex; flex-wrap:wrap; gap:8px; }
+.sub-btn { font-family:var(--font-sans); font-size:13px; padding:8px 16px; border-radius:18px; border:1px solid var(--border); background:var(--bg-input); color:var(--text-muted); cursor:pointer; transition:all .2s; }
+.sub-btn:hover { color:var(--text-secondary); border-color:var(--text-muted); }
+.sub-btn.active { color:var(--accent); background:var(--accent-dim); border-color:var(--border-accent); }
+.sub-btn.random-sub { border-style:dashed; color:var(--accent-2); }
+.sub-btn.random-sub.active { color:var(--accent-2); background:var(--accent-2-dim); border-color:rgba(126,184,218,.4); border-style:solid; }
+.topic-bottom { margin-top:auto; padding-top:24px; }
+
+/* ===== 词汇展示 ===== */
+.marquee-wrap { margin-bottom:16px; }
+.marquee-label { font-size:10px; color:var(--text-muted); letter-spacing:.15em; margin-bottom:8px; text-align:center; }
+.marquee-container { overflow:hidden; position:relative; padding:8px 0; mask-image:linear-gradient(90deg,transparent,black 8%,black 92%,transparent); -webkit-mask-image:linear-gradient(90deg,transparent,black 8%,black 92%,transparent); }
+.marquee-track { display:inline-flex; gap:12px; white-space:nowrap; animation-name:marquee; animation-timing-function:linear; animation-iteration-count:infinite; animation-duration:40s; }
+.marquee-track.reverse { animation-direction:reverse; }
+@keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+.marquee-item { font-family:var(--font-serif); font-size:12px; color:var(--text-muted); padding:3px 10px; border-radius:12px; background:var(--bg-input); border:1px solid var(--border); flex-shrink:0; }
+.marquee-item.hl { color:var(--accent-3); border-color:rgba(140,196,140,.3); }
+
+.word-stage { text-align:center; flex:1; display:flex; flex-direction:column; justify-content:center; padding:16px 0 24px; position:relative; }
+.word-stage::before { content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:260px; height:260px; background:radial-gradient(circle,var(--accent-dim),transparent 70%); pointer-events:none; }
+.word-path { font-size:11px; color:var(--text-muted); letter-spacing:.15em; margin-bottom:12px; position:relative; }
+.word-path .sep { margin:0 5px; }
+.word-path .cur { color:var(--accent); }
+.source-badge { display:inline-block; font-size:10px; padding:2px 10px; border-radius:4px; letter-spacing:.1em; margin-bottom:14px; position:relative; }
+.source-badge.builtin { background:var(--accent-dim); color:var(--accent); border:1px solid var(--border-accent); }
+.source-badge.online { background:var(--accent-2-dim); color:var(--accent-2); border:1px solid rgba(126,184,218,.3); }
+.source-badge.article { background:var(--accent-3-dim); color:var(--accent-3); border:1px solid rgba(140,196,140,.3); }
+.the-word { font-family:var(--font-serif); font-size:clamp(44px,13vw,72px); font-weight:900; letter-spacing:.12em; margin-bottom:14px; position:relative; min-height:1.2em; }
+.the-word.flash { animation:wordFlash .45s ease; }
+@keyframes wordFlash { 0%{opacity:.2;transform:scale(.92)} 60%{transform:scale(1.03)} 100%{opacity:1;transform:scale(1)} }
+.prompt-box { background:var(--bg-input); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:12px 16px; text-align:left; max-width:460px; margin:0 auto 24px; position:relative; }
+.prompt-box .prompt-label { font-size:10px; color:var(--accent); letter-spacing:.15em; margin-bottom:4px; }
+.prompt-box .prompt-text { font-size:13px; color:var(--text-secondary); line-height:1.8; }
+
+.word-actions { position:relative; }
+.btn-next { width:100%; font-family:var(--font-serif); font-size:18px; font-weight:600; padding:16px; border-radius:var(--radius); border:none; background:var(--accent); color:#1a1a1a; cursor:pointer; transition:all .2s; letter-spacing:.1em; margin-bottom:12px; }
+.btn-next:hover { background:#eab85e; box-shadow:0 4px 24px var(--accent-glow); }
+.btn-next:active { transform:scale(.98); }
+.btn-row-2 { display:flex; gap:10px; }
+.btn-sub { flex:1; font-family:var(--font-sans); font-size:13px; font-weight:500; padding:12px 8px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg-card); color:var(--text-secondary); cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:6px; }
+.btn-sub:hover { color:var(--text-primary); border-color:var(--text-muted); }
+.btn-sub.online { color:var(--accent-2); border-color:rgba(126,184,218,.25); }
+.btn-sub.online:hover { background:var(--accent-2-dim); }
+.btn-sub.article { color:var(--accent-3); border-color:rgba(140,196,140,.25); }
+.btn-sub.article:hover { background:var(--accent-3-dim); }
+.btn-sub .spinner { width:12px; height:12px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin .7s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+/* ===== 搜索进度图层 ===== */
+.search-overlay { position:absolute; inset:0; background:rgba(20,24,36,.92); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); border-radius:var(--radius); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:10; opacity:0; pointer-events:none; transition:opacity .3s ease; padding:24px; }
+.search-overlay.show { opacity:1; pointer-events:auto; }
+.so-spinner { width:36px; height:36px; border:3px solid var(--border); border-top-color:var(--accent-2); border-radius:50%; animation:spin .8s linear infinite; margin-bottom:16px; }
+.so-spinner.done { border-color:var(--accent-3); border-top-color:var(--accent-3); animation:none; display:flex; align-items:center; justify-content:center; font-size:18px; color:var(--accent-3); }
+.so-spinner.error { border-color:#d4766a; border-top-color:#d4766a; animation:none; display:flex; align-items:center; justify-content:center; font-size:18px; color:#d4766a; }
+.so-title { font-family:var(--font-serif); font-size:16px; font-weight:600; margin-bottom:12px; letter-spacing:.05em; }
+.so-step { font-size:12px; color:var(--text-secondary); margin-bottom:6px; display:flex; align-items:center; gap:8px; }
+.so-step .dot { width:6px; height:6px; border-radius:50%; background:var(--text-muted); flex-shrink:0; }
+.so-step.active .dot { background:var(--accent-2); box-shadow:0 0 6px var(--accent-2); }
+.so-step.done .dot { background:var(--accent-3); }
+.so-step.done { color:var(--text-muted); }
+.so-result { text-align:center; margin:8px 0; }
+.so-result .sr-row { font-size:13px; color:var(--text-secondary); margin-bottom:4px; }
+.so-result .sr-row .num { color:var(--accent-2); font-weight:600; font-family:var(--font-serif); }
+.so-result .sr-row .num.green { color:var(--accent-3); }
+.so-result .sr-row .num.red { color:#d4766a; }
+.so-result .sr-preview { font-size:11px; color:var(--text-muted); margin-top:8px; line-height:1.6; max-width:280px; word-break:break-all; }
+.so-confirm-btn { margin-top:16px; padding:10px 32px; border-radius:var(--radius-sm); border:none; background:var(--accent-2); color:#1a1a1a; font-size:14px; font-weight:600; cursor:pointer; transition:all .2s; font-family:var(--font-sans); letter-spacing:.05em; }
+.so-confirm-btn:hover { background:#94c8e8; box-shadow:0 4px 16px rgba(126,184,218,.3); }
+.so-confirm-btn:active { transform:scale(.97); }
+.the-word.boost-online { color:var(--accent-2); text-shadow:0 0 20px rgba(126,184,218,.4); }
+.marquee-item.boost-online { color:var(--accent-2); border-color:rgba(126,184,218,.4); background:rgba(126,184,218,.08); }
+.source-badge.boost-online { background:var(--accent-2-dim); color:var(--accent-2); border:1px solid rgba(126,184,218,.4); }
+.source-badge.mixed { background:linear-gradient(90deg,var(--accent-dim),var(--accent-2-dim)); color:var(--text-primary); border:1px solid var(--border-accent); }
+
+/* ===== 表达记录框 ===== */
+.record-box { background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 16px; max-width:460px; margin:0 auto 20px; position:relative; }
+.record-hint { font-size:11px; color:var(--text-muted); text-align:center; margin-bottom:10px; line-height:1.6; letter-spacing:.03em; }
+.record-method { font-size:11px; color:var(--text-secondary); background:var(--bg-card-2); border:1px solid var(--border); border-radius:6px; padding:8px 12px; margin-bottom:12px; line-height:1.7; text-align:center; }
+.record-method strong { color:var(--accent); font-weight:600; }
+.record-actions { display:flex; gap:8px; }
+.record-btn { flex:1; font-size:12px; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-secondary); cursor:pointer; transition:all .2s; font-family:var(--font-sans); }
+.record-btn:hover { color:var(--text-primary); border-color:var(--text-muted); }
+.record-btn.primary { color:var(--accent); border-color:var(--border-accent); background:var(--accent-dim); }
+.record-btn.primary:hover { background:rgba(224,168,74,.18); }
+.record-btn.think { color:var(--accent-2); border-color:rgba(126,184,218,.3); background:var(--accent-2-dim); }
+.record-btn.think:hover { background:rgba(126,184,218,.15); }
+
+/* ===== 记录/思考题界面 ===== */
+.record-header { text-align:center; margin-bottom:20px; padding:16px; background:var(--bg-card); border-radius:var(--radius-sm); border:1px solid var(--border); }
+.record-header .rh-word { font-family:var(--font-serif); font-size:28px; font-weight:700; color:var(--accent); letter-spacing:.1em; margin-bottom:6px; }
+.record-header .rh-path { font-size:11px; color:var(--text-muted); letter-spacing:.08em; }
+.record-textarea { width:100%; min-height:140px; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; color:var(--text-primary); font-family:var(--font-sans); font-size:14px; line-height:1.8; resize:vertical; margin-bottom:12px; }
+.record-textarea:focus { outline:none; border-color:var(--border-accent); }
+.record-textarea::placeholder { color:var(--text-muted); }
+.record-submit { width:100%; padding:12px; border-radius:var(--radius-sm); border:none; background:var(--accent); color:#1a1a1a; font-size:14px; font-weight:600; cursor:pointer; transition:all .2s; font-family:var(--font-serif); letter-spacing:.08em; margin-bottom:20px; }
+.record-submit:hover { background:#eab85e; }
+.record-submit:active { transform:scale(.98); }
+
+/* 思考题列表 */
+.think-list { margin-bottom:16px; }
+.think-item { background:var(--bg-input); border:1px solid var(--border); border-left:3px solid var(--accent-2); border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:12px 14px; margin-bottom:8px; font-size:13px; color:var(--text-secondary); line-height:1.7; }
+.think-item .ti-num { display:inline-block; width:20px; height:20px; line-height:20px; text-align:center; border-radius:50%; background:var(--accent-2-dim); color:var(--accent-2); font-size:11px; font-weight:600; margin-right:8px; flex-shrink:0; }
+.think-item { display:flex; align-items:flex-start; }
+.think-change-btn { width:100%; padding:10px; border-radius:var(--radius-sm); border:1px dashed rgba(126,184,218,.4); background:transparent; color:var(--accent-2); font-size:13px; cursor:pointer; transition:all .2s; margin-bottom:16px; font-family:var(--font-sans); }
+.think-change-btn:hover { background:var(--accent-2-dim); }
+
+/* 已记录列表 */
+.record-log-title { font-size:12px; color:var(--text-muted); letter-spacing:.12em; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.record-log-title .line { flex:1; height:1px; background:var(--border); }
+.record-log-item { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; margin-bottom:8px; }
+.record-log-item .rli-meta { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.record-log-item .rli-delete { background:none; border:none; color:var(--text-muted); font-size:14px; cursor:pointer; padding:2px 6px; border-radius:4px; transition:all .2s; line-height:1; }
+.record-log-item .rli-delete:hover { color:#e07070; background:rgba(224,112,112,.1); }
+.record-log-item .rli-word { font-family:var(--font-serif); font-size:13px; font-weight:600; color:var(--accent); }
+.record-log-item .rli-time { font-size:10px; color:var(--text-muted); }
+.record-log-item .rli-question { font-size:11px; color:var(--accent-2); margin-bottom:4px; line-height:1.5; }
+.record-log-item .rli-content { font-size:12px; color:var(--text-secondary); line-height:1.7; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.record-log-empty { text-align:center; padding:20px; color:var(--text-muted); font-size:12px; }
+
+
+
+/* ===== 第四界面：文章拆解 ===== */
+.input-tabs { display:flex; gap:6px; margin-bottom:16px; background:var(--bg-input); padding:4px; border-radius:var(--radius-sm); }
+.input-tab { flex:1; font-size:13px; padding:8px; text-align:center; border-radius:6px; cursor:pointer; color:var(--text-muted); transition:all .2s; border:none; background:transparent; font-family:var(--font-sans); }
+.input-tab.active { background:var(--bg-card-2); color:var(--text-primary); }
+.input-panel { display:none; }
+.input-panel.active { display:block; }
+
+.file-drop { border:2px dashed var(--border); border-radius:var(--radius-sm); padding:32px 16px; text-align:center; cursor:pointer; transition:all .2s; background:var(--bg-input); }
+.file-drop:hover, .file-drop.dragover { border-color:var(--accent-3); background:var(--accent-3-dim); }
+.file-drop .drop-icon { font-size:28px; margin-bottom:8px; color:var(--accent-3); }
+.file-drop .drop-text { font-size:13px; color:var(--text-secondary); }
+.file-drop .drop-hint { font-size:11px; color:var(--text-muted); margin-top:4px; }
+.file-drop input[type=file] { display:none; }
+.file-name { font-size:12px; color:var(--accent-3); margin-top:8px; word-break:break-all; }
+
+.link-input { display:flex; gap:8px; }
+.link-input input { flex:1; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 14px; color:var(--text-primary); font-size:13px; font-family:var(--font-sans); }
+.link-input input:focus { outline:none; border-color:rgba(140,196,140,.4); }
+.link-input input::placeholder { color:var(--text-muted); }
+.link-fetch-btn { padding:10px 16px; border-radius:var(--radius-sm); border:1px solid rgba(140,196,140,.3); background:var(--accent-3-dim); color:var(--accent-3); font-size:13px; cursor:pointer; transition:all .2s; font-family:var(--font-sans); white-space:nowrap; }
+.link-fetch-btn:hover { background:rgba(140,196,140,.2); }
+.link-fetch-btn:disabled { opacity:.5; cursor:not-allowed; }
+
+.textarea-panel textarea { width:100%; min-height:140px; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; color:var(--text-primary); font-family:var(--font-sans); font-size:13px; line-height:1.8; resize:vertical; }
+.textarea-panel textarea:focus { outline:none; border-color:rgba(140,196,140,.4); }
+.textarea-panel textarea::placeholder { color:var(--text-muted); }
+.textarea-panel .ta-footer { display:flex; justify-content:space-between; align-items:center; margin-top:8px; }
+.textarea-panel .ta-cnt { font-size:11px; color:var(--text-muted); }
+.textarea-panel .ta-btns { display:flex; gap:6px; }
+
+.analyze-btn { width:100%; margin-top:16px; padding:14px; border-radius:var(--radius); border:none; background:var(--accent-3); color:#1a1a1a; font-size:15px; font-weight:600; cursor:pointer; transition:all .2s; font-family:var(--font-serif); letter-spacing:.08em; }
+.analyze-btn:hover { background:#9dd49d; box-shadow:0 4px 20px rgba(140,196,140,.3); }
+.analyze-btn:disabled { background:var(--text-muted); color:var(--bg-input); cursor:not-allowed; box-shadow:none; }
+.analyze-btn .spinner { display:inline-block; width:14px; height:14px; border:2px solid #1a1a1a; border-top-color:transparent; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:6px; }
+
+.extract-result { margin-top:20px; }
+.extract-result .er-title { font-size:13px; color:var(--text-secondary); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.extract-result .er-title .line { flex:1; height:1px; background:var(--border); }
+.keyword-grid { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+.keyword-chip { font-family:var(--font-serif); font-size:14px; padding:8px 16px; border-radius:18px; background:var(--accent-3-dim); border:1px solid rgba(140,196,140,.3); color:var(--accent-3); cursor:default; display:flex; align-items:center; gap:6px; }
+.keyword-chip .kf { font-size:10px; color:var(--text-muted); font-family:var(--font-sans); }
+.related-words { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
+.related-word { font-size:12px; padding:4px 10px; border-radius:10px; background:var(--bg-input); border:1px solid var(--border); color:var(--text-muted); }
+.confirm-btn { width:100%; padding:14px; border-radius:var(--radius); border:none; background:var(--accent); color:#1a1a1a; font-size:15px; font-weight:600; cursor:pointer; transition:all .2s; font-family:var(--font-serif); letter-spacing:.08em; }
+.confirm-btn:hover { background:#eab85e; box-shadow:0 4px 20px var(--accent-glow); }
+
+.toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(16px); background:var(--bg-card); border:1px solid var(--border-accent); color:var(--text-primary); padding:10px 20px; border-radius:var(--radius-sm); font-size:13px; opacity:0; transition:all .25s; z-index:100; pointer-events:none; max-width:85vw; text-align:center; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+::-webkit-scrollbar { width:4px; height:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--text-muted); border-radius:2px; }
+@media (min-width:600px) { .major-grid { grid-template-columns:repeat(4,1fr); } }
+</style>
+</head>
+<body>
+
+<!-- 视图1：首页 -->
+<div class="view active" id="view-home">
+  <div class="container">
+    <div class="home-header">
+      <h1>随机词汇<span class="dot">·</span>生成器</h1>
+      <p class="home-subtitle">15分钟训练你的表达</p>
+      <p class="home-desc">按领域随机抽取词汇，训练你的思考与表达</p>
+    </div>
+    <div class="home-actions">
+      <div class="home-card card-1" id="cardTopic"><div class="card-icon">壹</div><div class="card-name">主题领域</div><div class="card-desc">选定大主题与细分领域<br>定向抽取词汇</div></div>
+      <div class="home-card card-2" id="cardRandom"><div class="card-icon">贰</div><div class="card-name">随机抽取</div><div class="card-desc">跳过主题选择<br>全领域随机抽取</div></div>
+    </div>
+    <div class="home-actions" style="margin-bottom:0;">
+      <div class="home-card card-3" id="cardArticle"><div class="card-icon">叁</div><div class="card-name">文章拆解</div><div class="card-desc">导入文件/粘贴/链接<br>从文章生成专属词库</div></div>
+      <div class="home-card card-4" id="cardLibrary"><div class="card-icon">肆</div><div class="card-name">词库设定</div><div class="card-desc">查看/删除/管理<br>内置搜索文章词汇</div></div>
+    </div>
+    <div class="home-history" id="homeHistory" style="display:none;"><div class="h-title"><span>最近抽取</span><span class="line"></span></div><div class="history-tags" id="historyTags"></div></div>
+  </div>
+</div>
+
+<!-- 视图2：主题选择 -->
+<div class="view" id="view-topic">
+  <div class="container">
+    <div class="top-bar"><button class="back-btn" data-back="home">‹</button><span class="top-title">选择主题领域</span></div>
+    <div class="topic-section"><div class="topic-label"><span>大主题</span><span class="line"></span></div><div class="major-grid" id="majorGrid"></div></div>
+    <div class="topic-section" id="subSection" style="display:none;"><div class="topic-label"><span>细分领域</span><span class="line"></span></div><div class="sub-list" id="subList"></div></div>
+    <div class="topic-bottom"><button class="btn-next" id="topicRandomBtn" disabled>随机抽取</button></div>
+  </div>
+</div>
+
+<!-- 视图3：词汇展示 -->
+<div class="view" id="view-word">
+  <div class="container">
+    <div class="top-bar"><button class="back-btn" id="wordBackBtn">‹</button><span class="top-title" id="wordTopTitle">表达训练</span></div>
+    <div class="marquee-wrap">
+      <div class="marquee-label">领域词汇流</div>
+      <div class="marquee-container"><div class="marquee-track" id="marquee1"></div></div>
+      <div class="marquee-container" style="margin-top:4px;"><div class="marquee-track reverse" id="marquee2"></div></div>
+    </div>
+    <div class="word-stage">
+      <div class="word-path" id="wordPath"><span>全领域随机</span></div>
+      <div class="source-badge builtin" id="sourceBadge" style="display:none;">内置词库</div>
+      <div class="the-word" id="theWord">— —</div>
+      <div class="record-box" id="recordBox" style="display:none;">
+        <div class="record-hint">建议用15分钟查阅学习该词汇，随后进行口语表达练习并记录</div>
+        <div class="record-method">表达四步：<strong>定义理解</strong> → <strong>生活联想</strong> → <strong>反思质疑</strong> → <strong>实际应用</strong></div>
+        <div class="record-actions">
+          <button class="record-btn primary" id="openRecordBtn">表达记录</button>
+          <button class="record-btn think" id="openThinkBtn">思考题</button>
+        </div>
+      </div>
+      <div class="search-overlay" id="searchOverlay">
+        <div class="so-spinner" id="soSpinner"></div>
+        <div class="so-title" id="soTitle">正在搜索</div>
+        <div id="soSteps"></div>
+        <div class="so-result" id="soResult" style="display:none;"></div>
+        <button class="so-confirm-btn" id="soConfirmBtn" style="display:none;">确 定</button>
+      </div>
+    </div>
+    <div class="word-actions">
+      <button class="btn-next" id="nextBtn">换 一 个</button>
+      <div class="btn-row-2">
+        <button class="btn-sub article" id="articleBtn">文章拆解词汇</button>
+        <button class="btn-sub online" id="onlineBtn"><span id="onlineBtnText">联网获取新词</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 视图4：文章拆解 -->
+<div class="view" id="view-article">
+  <div class="container">
+    <div class="top-bar"><button class="back-btn" id="articleBackBtn">‹</button><span class="top-title">文章拆解词汇</span></div>
+    <div class="input-tabs">
+      <button class="input-tab active" data-tab="file">文件导入</button>
+      <button class="input-tab" data-tab="text">粘贴文本</button>
+      <button class="input-tab" data-tab="link">链接解析</button>
+    </div>
+    <div class="input-panel active" id="panel-file">
+      <div class="file-drop" id="fileDrop">
+        <div class="drop-icon">⬆</div>
+        <div class="drop-text">点击或拖拽文件到此处</div>
+        <div class="drop-hint">支持 .txt / .md 文本文件</div>
+        <input type="file" id="fileInput" accept=".txt,.md,.text">
+      </div>
+      <div class="file-name" id="fileName"></div>
+    </div>
+    <div class="input-panel" id="panel-text">
+      <div class="textarea-panel">
+        <textarea id="pasteInput" placeholder="在此粘贴文章内容……&#10;&#10;系统将自动提取 5-10 个核心关键词，并搜索相关领域词汇。"></textarea>
+        <div class="ta-footer"><span class="ta-cnt"><span id="pasteCount">0</span> 字</span><div class="ta-btns"><button class="btn-sub" style="padding:6px 12px;font-size:12px;" id="loadSampleBtn">载入示例</button><button class="btn-sub" style="padding:6px 12px;font-size:12px;" id="clearPasteBtn">清空</button></div></div>
+      </div>
+    </div>
+    <div class="input-panel" id="panel-link">
+      <div class="link-input">
+        <input type="url" id="linkInput" placeholder="粘贴网页链接，如 https://…">
+        <button class="link-fetch-btn" id="fetchLinkBtn">获取</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">通过公共代理抓取网页正文，部分网站可能无法解析</div>
+    </div>
+    <button class="analyze-btn" id="analyzeBtn" disabled>开始拆解</button>
+    <button class="article-record-btn" id="articleRecordBtn">📋 拆解词库记录</button>
+    <div class="extract-result" id="extractResult" style="display:none;">
+      <div class="er-title"><span>核心关键词</span><span class="line"></span></div>
+      <div class="keyword-grid" id="keywordGrid"></div>
+      <div class="er-title"><span>相关领域词汇</span><span class="line"></span></div>
+      <div class="related-words" id="relatedWords"></div>
+      <button class="confirm-btn" id="confirmArticleBtn">确认并生成词库</button>
+    </div>
+  </div>
+</div>
+
+<!-- 视图5：表达记录 -->
+<div class="view" id="view-record">
+  <div class="container">
+    <div class="top-bar"><button class="back-btn" data-back="word">‹</button><span class="top-title">表达记录</span></div>
+    <div class="record-header">
+      <div class="rh-word" id="recordWord">— —</div>
+      <div class="rh-path" id="recordPath">—</div>
+    </div>
+    <textarea class="record-textarea" id="recordInput" placeholder="写下你对这个词的理解、联想、亲身经历或想要表达的内容……&#10;&#10;记录会自动保存，可随时回顾。"></textarea>
+    <button class="record-submit" id="recordSubmitBtn">保存记录</button>
+    <div class="record-log-title"><span>历史记录</span><span class="line"></span></div>
+    <div id="recordLogList"></div>
+  </div>
+</div>
+
+<!-- 视图6：思考题 -->
+<div class="view" id="view-think">
+  <div class="container">
+    <div class="top-bar"><button class="back-btn" data-back="word">‹</button><span class="top-title">表达思考题</span></div>
+    <div class="record-header">
+      <div class="rh-word" id="thinkWord">— —</div>
+      <div class="rh-path" id="thinkPath">—</div>
+    </div>
+    <div class="think-list" id="thinkList"></div>
+    <button class="think-change-btn" id="thinkChangeBtn">换一道思考题</button>
+    <textarea class="record-textarea" id="thinkInput" placeholder="针对上面的思考题，写下你的思考和回答……"></textarea>
+    <button class="record-submit" id="thinkSubmitBtn">保存思考</button>
+    <div class="record-log-title"><span>思考记录</span><span class="line"></span></div>
+    <div id="thinkLogList"></div>
+  </div>
+</div>
+
+<!-- 视图7：词库设定 -->
+<div class="view" id="view-library">
+  <div class="container">
+    <div class="top-bar"><button class="back-btn" data-back="home">‹</button><span class="top-title">词库设定</span></div>
+    <div class="lib-stats">
+      <div class="lib-stat builtin"><div class="ls-num" id="libCountBuiltin">0</div><div class="ls-label">内置词</div></div>
+      <div class="lib-stat online"><div class="ls-num" id="libCountOnline">0</div><div class="ls-label">搜索词</div></div>
+      <div class="lib-stat article"><div class="ls-num" id="libCountArticle">0</div><div class="ls-label">文章词</div></div>
+    </div>
+    <!-- 层级导航 -->
+    <div class="lib-breadcrumb" id="libBreadcrumb"></div>
+    <!-- 来源选择 -->
+    <div class="lib-section" id="libSourceSection">
+      <div class="topic-label"><span>选择词库来源</span><span class="line"></span></div>
+      <div class="major-grid" id="libSourceGrid"></div>
+    </div>
+    <!-- 大主题选择 -->
+    <div class="lib-section" id="libMajorSection" style="display:none;">
+      <div class="topic-label"><span>选择大主题</span><span class="line"></span></div>
+      <div class="major-grid" id="libMajorGrid"></div>
+    </div>
+    <!-- 细分领域选择 -->
+    <div class="lib-section" id="libSubSection" style="display:none;">
+      <div class="topic-label"><span>选择细分领域</span><span class="line"></span></div>
+      <div class="sub-list" id="libSubList"></div>
+    </div>
+    <!-- 词汇列表 -->
+    <div class="lib-section" id="libWordSection" style="display:none;">
+      <div class="topic-label"><span id="libWordTitle">词汇列表</span><span class="line"></span></div>
+      <input type="text" class="lib-search" id="libSearch" placeholder="搜索词汇…">
+      <div class="lib-list" id="libList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 视图8：拆解词库记录 -->
+<div class="view" id="view-article-records">
+  <div class="container">
+    <div class="top-bar"><button class="back-btn" data-back="article">‹</button><span class="top-title">拆解词库记录</span></div>
+    <div id="articleRecordsList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== 主题词汇库（含效应/难题/猜想类小概念） ===== */
+const TOPICS = {
+  "哲学": {
+    "西方哲学": { words: ["理念","本体","真理","理性","怀疑","辩证法","形而上学","认识论","伦理学","自由主义","功利主义","存在主义","实用主义","现象学","结构主义","先验","超验","范畴","物自体","绝对精神","权力意志","超人","存在先于本质","荒诞","忒修斯之船","电车难题","囚徒困境","纽康姆悖论","布里丹之驴","芝诺悖论","休谟问题","他心问题","自由意志难题","恶的问题","全能悖论"], wiki: "西方哲学 概念" },
+    "中国哲学": { words: ["道","仁","礼","无为","中庸","性善","性恶","格物","致知","知行合一","天理","人欲","太极","阴阳","五行","八卦","逍遥","齐物","名教","自然","心学","理学","气","天人合一","和而不同","内圣外王","道法自然","兼爱","非攻","明心见性","白马非马","坚白论","刑名之学","黄老之术","玄学","般若","中观","唯识","禅宗","格义"], wiki: "中国哲学 概念" },
+    "伦理学": { words: ["美德","正义","公平","自由","良知","道德","功利","德性","幸福","善恶","契约","平等","尊严","利他","利己","道义论","德性伦理","关怀伦理","元伦理","规范伦理","应用伦理","生命伦理","环境伦理","商业伦理","全球正义","电车难题","救生艇难题","器官移植难题","侏儒问题","道德运气","道德圣人","超额行为","道德相对主义","道德绝对主义","道德特殊主义"], wiki: "伦理学 概念" },
+    "美学": { words: ["美","崇高","悲剧","喜剧","模仿","表现","意味","意境","气韵","风骨","神韵","趣味","美感","审美","古典","浪漫","现代","后现代","移情","距离说","直觉说","符号说","接受美学","艺术界","艺术终结论","视觉文化","图像学","风格","趣味判断","优美","壮美","滑稽","荒诞","丑","中和","气韵生动","澄怀味象","外师造化","中得心源"], wiki: "美学 概念" },
+    "逻辑学": { words: ["同一律","矛盾律","排中律","充足理由律","三段论","直言命题","假言命题","选言命题","二难推理","悖论","说谎者悖论","罗素悖论","哥德尔不完备定理","塔斯基真理论","摹状词理论","可能世界","严格蕴含","实质蕴含怪论","归纳问题","可证伪性","范式","不可通约性","奥卡姆剃刀","思维经济原则","集合论悖论","连续统假设","选择公理","巴拿赫塔斯基悖论","希尔伯特旅馆","蒙提霍尔问题"], wiki: "逻辑学 概念" },
+    "政治哲学": { words: ["社会契约","自然状态","主权","公意","消极自由","积极自由","共和主义","公民人文主义","协商民主","多元文化主义","身份政治","差异政治","承认的政治","分配正义","持有正义","能力进路","优绩主义","精英主义","民粹主义","权威","合法性","政治义务","公民不服从","革命权","世界主义","民族主义","爱国主义","永久和平","宽容","政教分离"], wiki: "政治哲学 概念" }
+  },
+  "历史": {
+    "中国古代史": { words: ["分封制","郡县制","科举制","三省六部","井田制","均田制","丝绸之路","百家争鸣","罢黜百家","九品中正","门阀","藩镇割据","王安石变法","张居正改革","康乾盛世","文景之治","贞观之治","开元盛世","土木堡之变","靖康之耻","衣冠南渡","永嘉之乱","安史之乱","三藩之乱","摊丁入亩","火耗归公","改土归流","金瓶掣签","驻藏大臣","伊犁将军","李悝变法","商鞅变法","孝文帝改革","周世宗改革","庆历新政","一条鞭法","更名田","军机处","奏折制度","秘密立储"], wiki: "中国古代史 制度" },
+    "世界近现代史": { words: ["文艺复兴","宗教改革","启蒙运动","工业革命","法国大革命","美国独立","明治维新","第一次世界大战","第二次世界大战","冷战","全球化","殖民主义","民族主义","帝国主义","联合国","凡尔赛体系","雅尔塔体系","布雷顿森林","马歇尔计划","古巴导弹危机","柏林墙","苏联解体","欧共体","不结盟运动","万隆会议","苏伊士运河危机","石油危机","柏林会议","门户开放","大陆政策","光荣革命","大宪章","三级会议","热月政变","雾月政变","波旁复辟","七月革命","1848年革命","巴黎公社","罗斯福新政"], wiki: "世界近现代史 事件" },
+    "思想史": { words: ["轴心时代","人文主义","理性主义","经验主义","浪漫主义","实证主义","马克思主义","自由主义","保守主义","无政府主义","女权主义","后现代主义","解构主义","东方主义","功利主义","社会契约","天赋人权","人民主权","三权分立","社会达尔文主义","弗洛伊德主义","存在主义","结构主义","后结构主义","新自由主义","社群主义","多元文化主义","生态主义","和平主义","世界主义","辉格史观","年鉴学派","长时段","心态史","计量史学","口述史","微观史","全球史","大历史","新文化史"], wiki: "思想史 思潮" },
+    "科技史": { words: ["科学革命","哥白尼革命","日心说","地心说","万有引力","经典力学","电磁理论","进化论","细胞学说","能量守恒","相对论","量子力学","DNA双螺旋","信息论","控制论","系统论","耗散结构","混沌理论","分形几何","纳米技术","互联网","人工智能","蒸汽机","内燃机","电力革命","原子能","半导体","集成电路","个人电脑","万维网","李约瑟难题","钱学森之问","索卡尔事件","科学战争","范式转换","常规科学","科学共同体","无形学院","默顿规范","优先权之争"], wiki: "科技史 概念" },
+    "经济史": { words: ["重商主义","重农学派","古典经济学","边际革命","凯恩斯革命","货币主义","供给学派","新制度经济学","行为经济学","大萧条","滞胀","亚洲金融危机","2008年金融危机","欧债危机","工业革命","第二次工业革命","第三次工业革命","第四次工业革命","圈地运动","羊吃人","三角贸易","奴隶贸易","东印度公司","荷兰东印度公司","郁金香狂热","南海泡沫","密西西比泡沫","大稳健","大衰退","流动性陷阱","马尔萨斯陷阱","中等收入陷阱","资源诅咒","荷兰病","后发优势","后发劣势","路径依赖","锁定效应","华盛顿共识","北京共识"], wiki: "经济史 概念" }
+  },
+  "经济学": {
+    "宏观经济学": { words: ["GDP","通货膨胀","通货紧缩","失业率","利率","汇率","财政政策","货币政策","总需求","总供给","经济周期","经济增长","滞胀","凯恩斯主义","货币主义","乘数效应","挤出效应","流动性陷阱","菲利普斯曲线","奥肯定律","拉弗曲线","自动稳定器","公开市场操作","法定准备金","再贴现率","名义GDP","实际GDP","潜在产出","产出缺口","痛苦指数","李嘉图等价","巴罗李嘉图等价","泰勒规则","通胀目标制","前瞻指引","量化宽松","扭转操作","直升机撒钱","财政乘数","节俭悖论"], wiki: "宏观经济学 概念" },
+    "微观经济学": { words: ["供需","均衡","边际效用","边际成本","机会成本","比较优势","市场结构","垄断","寡头","完全竞争","价格歧视","消费者剩余","生产者剩余","帕累托最优","需求曲线","供给曲线","收入效应","替代效应","吉芬商品","凡勃伦效应","囚徒困境","纳什均衡","占优策略","重复博弈","信息不对称","逆向选择","道德风险","信号传递","科斯定理","柠檬市场","效率工资","边际效用递减","戈森定律","示范效应","棘轮效应","羊群效应","网络效应","双边市场","长尾理论"], wiki: "微观经济学 概念" },
+    "政治经济学": { words: ["剩余价值","剥削","阶级","资本","商品","货币","劳动价值论","再生产","资本积累","利润率下降","帝国主义","依附理论","世界体系","新自由主义","华盛顿共识","原始积累","商品拜物教","异化","物化","阶级意识","霸权","文化领导权","国家垄断资本主义","金融资本","食利者","中心外围","不等价交换","发展主义","进口替代","出口导向","有机构成","绝对剩余价值","相对剩余价值","超额剩余价值","生产价格","转形问题","实现危机","消费不足","比例失调","虚拟资本","金融化"], wiki: "政治经济学 概念" },
+    "行为经济学": { words: ["前景理论","损失厌恶","禀赋效应","沉没成本谬误","锚定效应","可得性启发","代表性启发","框架效应","心理账户","双曲线贴现","现时偏好","自我控制问题","助推","选择架构","默认选项","峰终定律","过程忽视","少即是多","选择过载","偏好反转","兼容性效应","评价能力假说","联合评估","单独评估","可识别受害者效应","概率忽视","热手谬误","赌徒谬误","回归谬误","控制错觉","乐观偏差","规划谬误","时间折扣","延迟满足","棉花糖实验","自我决定理论","内在动机","外在动机","过度理由效应","搭便车效应"], wiki: "行为经济学 概念" },
+    "发展经济学": { words: ["经济发展","可持续发展","人类发展指数","千年发展目标","可持续发展目标","贫困陷阱","低收入均衡陷阱","大推动理论","平衡增长","不平衡增长","临界最小努力","二元经济","刘易斯模型","拉尼斯费景汉模型","托达罗模型","结构转型","产业升级","雁行模式","飞 geese 模式","进口替代工业化","出口导向工业化","贸易条件恶化论","普雷维什辛格假说","依附论","世界体系论","全球价值链","微笑曲线","中等收入陷阱","后发优势","后发劣势","技术差距","技术转移","技术扩散","蛙跳理论","制度变迁","路径依赖","包容性增长","共享发展","绿色发展","低碳经济"], wiki: "发展经济学 概念" }
+  },
+  "艺术": {
+    "绘画流派": { words: ["印象派","后印象派","立体主义","表现主义","超现实主义","抽象表现主义","波普艺术","极简主义","文艺复兴","巴洛克","洛可可","新古典主义","浪漫主义","现实主义","点彩派","野兽派","达达主义","构成主义","至上主义","未来主义","形而上画派","魔幻现实主义","新表现主义","涂鸦艺术","观念艺术","大地艺术","装置艺术","行为艺术","数字艺术","NFT艺术","纳比派","象征主义","新艺术运动","装饰艺术","包豪斯","风格派","抽象创造","动态艺术","光效应艺术","贫穷艺术"], wiki: "绘画流派" },
+    "艺术史": { words: ["旧石器艺术","古埃及艺术","古希腊艺术","古罗马艺术","拜占庭艺术","罗马式","哥特式","文艺复兴","风格主义","巴洛克","洛可可","新古典主义","现代艺术","当代艺术","原始艺术","部落艺术","伊斯兰艺术","印度艺术","东南亚艺术","日本浮世绘","中国文人画","非洲艺术","大洋洲艺术","美洲原住民艺术","中世纪艺术","早期基督教艺术","加洛林文艺复兴","奥托艺术","国际哥特式","北方文艺复兴","犍陀罗艺术","笈多艺术","帕拉瓦艺术","朱罗艺术","吴哥艺术","婆罗浮屠","敦煌艺术","云冈石窟","龙门石窟","大足石刻"], wiki: "艺术史 时期" },
+    "艺术理论": { words: ["模仿论","表现论","形式论","符号论","现象学美学","接受美学","艺术界","艺术终结论","视觉文化","图像学","风格分析","传记学","精神分析","马克思主义批评","女性主义艺术批评","后殖民批评","符号学","解构主义","新艺术史","社会艺术史","视觉分析","图像志","媒介理论","景观社会","拟像","仿真","灵晕","机械复制","文化工业","奇观社会","凝视","他者","身份政治","关系美学","参与式艺术","社会介入艺术","体制批评","制度批判","新制度主义","艺术自治"], wiki: "艺术理论 概念" },
+    "音乐": { words: ["古典主义","浪漫主义","印象派音乐","表现主义音乐","序列主义","整体序列","偶然音乐","极简主义音乐","电子音乐","具体音乐","噪音音乐","爵士乐","布鲁斯","摇滚乐","流行音乐","嘻哈音乐","雷鬼","乡村音乐","民谣","世界音乐","奏鸣曲","交响曲","协奏曲","赋格","对位法","和声","调性","无调性","十二音技法","调式","节奏","节拍","旋律","曲式","乐段","主导动机","固定音型","切分音","连音"], wiki: "音乐 概念" },
+    "建筑": { words: ["古典建筑","哥特建筑","文艺复兴建筑","巴洛克建筑","新古典主义建筑","现代主义建筑","后现代主义建筑","解构主义建筑","参数化设计","粗野主义","新陈代谢派","白色派","纽约五人","德州骑警","包豪斯","国际风格","极简主义建筑","高技派","解构主义","新都市主义","批判地域主义","绿色建筑","可持续建筑","被动式建筑","零能耗建筑","生态建筑","参数化建筑","生成设计","BIM","装配式建筑","模数化","透明性","物质性","场所精神"," Genius Loci","建筑现象学","图底关系"], wiki: "建筑 概念" }
+  },
+  "文学": {
+    "诗歌": { words: ["意象","隐喻","象征","韵律","节奏","格律","自由诗","十四行诗","绝句","律诗","词","曲","赋","比兴","意境","通感","反讽","悖论","张力","含混","意识流","独白","对白","用典","互文","戏仿","拼贴","断裂","错位","零度写作","陌生化","间离效果","史诗剧场","抒情自我","客观对应物","非个性化","感受力分裂","去魅","复魅","纯诗","散文诗"], wiki: "诗歌 术语" },
+    "小说": { words: ["叙事","视角","情节","人物","背景","意识流","魔幻现实主义","后设小说","成长小说","流浪汉小说","复调","独白","对白","伏笔","悬念","倒叙","插叙","补叙","预叙","不可靠叙述","全知视角","限知视角","第一人称","第三人称","第二人称","叙事者","隐含作者","读者反应","空白","未定点","叙事交流","叙事语法","叙事逻辑","可能世界","虚构实体","虚构性","真实性效应","现实主义","自然主义","现代主义","后现代主义"], wiki: "小说 叙事学" },
+    "文学批评": { words: ["文本","互文性","解构","叙事学","读者反应","新批评","结构主义","后结构主义","女性主义批评","后殖民批评","新历史主义","文化研究","神话原型","细读","意图谬误","感受谬误","有机统一","张力","反讽","悖论","含混","话语","知识考古","谱系学","他者","凝视","怪诞","狂欢化","对话理论","复调理论","杂语","多声部","独白型","复调型","时空体","传奇时间","冒险时间","日常时间","公共时间"], wiki: "文学批评 理论" },
+    "戏剧": { words: ["悲剧","喜剧","正剧","悲喜剧","闹剧","荒诞派戏剧","史诗剧场","间离效果","第四堵墙","打破第四堵墙","独白","旁白","对白","潜台词","戏剧反讽","情境反讽","命运悲剧","性格悲剧","社会悲剧","存在悲剧","古典主义戏剧","三一律","情节整一","时间整一","地点整一","伊丽莎白时期戏剧","假面剧","牧歌剧","情节剧","佳构剧","问题剧","观念剧","表现主义戏剧","象征主义戏剧","超现实主义戏剧","存在主义戏剧","残酷戏剧","质朴戏剧","环境戏剧","沉浸式戏剧"], wiki: "戏剧 概念" }
+  },
+  "心理学": {
+    "认知心理学": { words: ["知觉","注意","决策","问题解决","心理表征","认知地图","图式","启发式","认知偏差","工作记忆","长时记忆","感觉记忆","短时记忆","编码","提取","遗忘","系列位置效应","闪光灯记忆","前瞻性记忆","元认知","认知负荷","双重编码","心理旋转","范畴化","原型","样例理论","确认偏误","锚定效应","可得性启发","代表性启发","框架效应","损失厌恶","禀赋效应","沉没成本谬误","达克效应","巴纳姆效应"], wiki: "认知心理学 概念" },
+    "社会心理学": { words: ["从众","服从","偏见","刻板印象","归因","认知失调","自我效能","社会认同","群体动力","旁观者效应","亲社会行为","攻击行为","说服","印象管理","首因效应","近因效应","晕轮效应","自我实现预言","基本归因错误","自我服务偏差","虚假普遍性","群体极化","群体思维","社会促进","社会懈怠","去个性化","角色","地位","阿希实验","米尔格拉姆实验","斯坦福监狱实验","罗森塔尔效应","皮格马利翁效应","霍桑效应","安慰剂效应","习得性无助","责任分散","斯德哥尔摩综合征"], wiki: "社会心理学 概念" },
+    "积极心理学": { words: ["幸福感","心流","品格优势","感恩","乐观","希望","正念","自我决定","积极情绪","拓展建构","繁荣","心理资本","感恩日记","自我同情","成长型思维","固定型思维","心理幸福感","主观幸福感","享乐适应","设定点理论","PERMA","VIA性格优势","意义感","使命感","工作投入","工作倦怠","恢复体验","积极关系","习得性乐观","解释风格","反事实思维","上行反事实","下行反事实","心理韧性","创伤后成长","坚毅","自控力","延迟满足"], wiki: "积极心理学 概念" },
+    "发展心理学": { words: ["依恋","安全型依恋","回避型依恋","矛盾型依恋","混乱型依恋","恒河猴实验","陌生情境实验","关键期","敏感期","印刻","同化","顺应","平衡化","感知运动阶段","前运算阶段","具体运算阶段","形式运算阶段","最近发展区","脚手架","心理理论","错误信念任务","执行功能","抑制控制","认知灵活性","工作记忆","气质","性格","大五人格","埃里克森八阶段","信任对不信任","自主对羞怯","主动对内疚","勤奋对自卑","同一性对角色混乱","亲密对孤独","繁衍对停滞","自我整合对绝望","青少年自我中心","假想观众","个人神话"], wiki: "发展心理学 概念" },
+    "临床心理学": { words: ["精神分析","潜意识","本我","自我","超我","防御机制","压抑","否认","投射","合理化","反向形成","升华","退行","移情","反移情","阻抗","释梦","自由联想","行为疗法","系统脱敏","暴露疗法","认知行为疗法","理性情绪行为疗法","正念认知疗法","接纳承诺疗法","辩证行为疗法","人本主义疗法","来访者中心疗法","无条件积极关注","共情","真诚一致","团体治疗","家庭治疗","系统式家庭治疗","结构式家庭治疗","心理评估","投射测验","罗夏墨迹测验","主题统觉测验","MMPI","诊断与统计手册"], wiki: "临床心理学 概念" }
+  },
+  "物理学": {
+    "量子力学": { words: ["波粒二象性","不确定性原理","叠加态","纠缠","薛定谔方程","波函数","量子隧穿","量子跃迁","泡利不相容","自旋","哈密顿量","观测者效应","退相干","量子场论","量子比特","量子计算","量子密码","贝尔不等式","隐变量","多世界诠释","哥本哈根诠释","路径积分","费曼图","重整化","规范场","希格斯机制","对称性破缺","真空涨落","虚粒子","量子芝诺效应","薛定谔的猫","EPR佯谬","量子擦除实验","延迟选择实验","量子隐形传态","量子不可克隆","量子测量问题","量子达尔文主义","关系性量子力学","量子贝叶斯主义"], wiki: "量子力学 概念" },
+    "相对论": { words: ["狭义相对论","广义相对论","时空连续体","光速不变","时间膨胀","长度收缩","质能方程","等效原理","引力透镜","引力波","黑洞","事件视界","奇点","闵可夫斯基空间","世界线","固有时","坐标时","同时性","洛伦兹变换","洛伦兹因子","四维矢量","能量动量张量","爱因斯坦场方程","史瓦西半径","克尔黑洞","虫洞","白洞","宇宙学常数","暗能量","引力红移","双生子佯谬","祖父悖论","电梯思想实验","水桶实验","马赫原理","参考系拖拽","引力时间延迟","彭罗斯过程","霍金辐射","黑洞信息悖论"], wiki: "相对论 概念" },
+    "天体物理": { words: ["恒星","行星","星系","星云","黑洞","中子星","白矮星","超新星","类星体","暗物质","暗能量","宇宙微波背景","大爆炸","红移","哈勃定律","主序星","红巨星","脉冲星","磁星","引力透镜","宇宙学原理","宇宙暴胀","宇宙年龄","可观测宇宙","星系团","超星系团","宇宙网","重子声学振荡","引力波天文学","费米悖论","奥伯斯佯谬","人择原理","弱人择原理","强人择原理","德雷克方程","大过滤器","卡尔达肖夫指数","戴森球","动物园假说","模拟假说"], wiki: "天体物理 概念" },
+    "热力学": { words: ["热力学第零定律","热力学第一定律","热力学第二定律","热力学第三定律","熵","熵增定律","焓","自由能","吉布斯自由能","亥姆霍兹自由能","内能","热量","功","绝对零度","摄氏温标","开尔文温标","热平衡","热传导","热对流","热辐射","黑体辐射","斯特藩玻尔兹曼定律","维恩位移定律","普朗克定律","比热","热容","相变","临界点","三相点","汽化热","熔解热","卡诺循环","卡诺效率","热机","制冷机","热泵","麦克斯韦妖","洛施密特佯谬","热寂说"], wiki: "热力学 概念" },
+    "经典力学": { words: ["牛顿第一定律","牛顿第二定律","牛顿第三定律","惯性","惯性系","非惯性系","惯性力","科里奥利力","离心力","动量","角动量","动能","势能","机械能守恒","动量守恒","角动量守恒","质心","重心","刚体","质点","质点系","弹性碰撞","非弹性碰撞","完全非弹性碰撞","恢复系数","摩擦力","正压力","张力","万有引力","引力常数","开普勒定律","第一宇宙速度","第二宇宙速度","第三宇宙速度","拉格朗日力学","哈密顿力学","最小作用量原理","诺特定理","对称性与守恒","混沌","三体问题"], wiki: "经典力学 概念" }
+  },
+  "生物学": {
+    "进化论": { words: ["自然选择","适者生存","基因漂变","共同祖先","物种形成","适应辐射","趋同进化","协同进化","间断平衡","分子钟","系统发育","生态位","繁殖成功率","遗传性","变异","选择压力","定向选择","稳定选择","分裂选择","性选择","亲属选择","互惠利他","进化稳定策略","红皇后假说","奠基者效应","瓶颈效应","基因流","杂交","多倍体","预适应","拉马克主义","获得性遗传","泛生论","种质论","现代综合","中性演化理论","分子进化","进化心理学","进化医学","衰老理论"], wiki: "进化论 概念" },
+    "遗传学": { words: ["基因","染色体","DNA","RNA","突变","等位基因","显性","隐性","基因型","表现型","遗传密码","转录","翻译","中心法则","表观遗传","甲基化","组蛋白修饰","非编码RNA","微小RNA","基因表达","基因调控","操纵子","启动子","增强子","外显子","内含子","剪接","逆转录","转座子","CRISPR","孟德尔定律","分离定律","自由组合定律","连锁互换","交换","重组率","遗传图谱","基因组","转录组","蛋白质组"], wiki: "遗传学 概念" },
+    "神经科学": { words: ["神经元","突触","神经递质","动作电位","大脑皮层","海马体","杏仁核","前额叶","神经可塑性","脑区","功能定位","脑电图","fMRI","镜像神经元","奖励回路","多巴胺","血清素","谷氨酸","GABA","髓鞘","郎飞结","离子通道","膜电位","静息电位","阈值","全或无","感觉皮层","运动皮层","布洛卡区","韦尼克区","割裂脑","胼胝体","边缘系统","丘脑","下丘脑","脑干","小脑","基底神经节","默认模式网络","突显网络","执行控制网络"], wiki: "神经科学 概念" },
+    "生态学": { words: ["生态系统","群落","种群","栖息地","生态位","食物链","食物网","营养级","生产者","消费者","分解者","能量流动","物质循环","碳循环","氮循环","水循环","生物多样性","物种丰富度","物种均匀度","优势种","关键种","建群种","生态演替","原生演替","次生演替","顶极群落","生态平衡","生态阈值","生态韧性","生态稳态","捕食","寄生","共生","互利共生","偏利共生","化感作用","他感作用","岛屿生物地理学","集合种群","meta种群"], wiki: "生态学 概念" }
+  },
+  "数学": {
+    "微积分": { words: ["极限","导数","积分","微分方程","偏导数","多重积分","级数","收敛","发散","泰勒展开","傅里叶变换","中值定理","极值","拐点","连续性","可微性","黎曼积分","勒贝格积分","不定积分","定积分","换元积分","分部积分","反常积分","一致收敛","幂级数","傅里叶级数","拉普拉斯变换","梯度","散度","旋度","斯托克斯定理","格林公式","高斯公式","雅可比矩阵","海森矩阵","凸函数","凹函数","单调函数","有界变差","绝对连续"], wiki: "微积分 概念" },
+    "概率论": { words: ["概率","随机变量","期望","方差","正态分布","二项分布","泊松分布","条件概率","贝叶斯定理","大数定律","中心极限定理","马尔可夫链","蒙特卡洛","置信区间","假设检验","p值","显著性","协方差","相关系数","分布函数","概率密度","边缘分布","联合分布","全概率公式","独立性","互斥","完备事件组","先验概率","后验概率","似然","蒙提霍尔问题","生日悖论","辛普森悖论","本福特定律","布拉塞悖论","随机过程","布朗运动","鞅","停时","遍历性"], wiki: "概率论 概念" },
+    "拓扑学": { words: ["拓扑空间","连续映射","同胚","紧致性","连通性","流形","基本群","同调","欧拉示性数","亏格","纽结","莫比乌斯带","克莱因瓶","不动点定理","豪斯多夫空间","度量空间","开集","闭集","邻域","基","子基","商空间","乘积空间","子空间","嵌入","浸入","淹没","纤维化","覆叠空间","叶状结构","同伦","同伦等价","形变收缩","可缩空间","CW复形","单纯复形","链复形","正合序列","五引理","蛇引理"], wiki: "拓扑学 概念" },
+    "数论": { words: ["素数","合数","孪生素数","哥德巴赫猜想","素数定理","算术基本定理","最大公约数","最小公倍数","欧几里得算法","贝祖定理","同余","模运算","费马小定理","欧拉定理","威尔逊定理","中国剩余定理","二次剩余","勒让德符号","二次互反律","丢番图方程","勾股数","费马大定理","佩尔方程","连分数","丢番图逼近","超越数","代数数","无理数","有理数","整数分拆","配尔方程","莫德尔方程","椭圆曲线","模形式","黎曼ζ函数","黎曼猜想","孪生素数猜想","abc猜想","考拉兹猜想","冰雹猜想"], wiki: "数论 概念" },
+    "代数学": { words: ["群","环","域","模","向量空间","线性变换","矩阵","行列式","特征值","特征向量","迹","秩","零空间","列空间","行空间","正交","内积","外积","叉积"," Gram-Schmidt","奇异值分解","特征分解","若尔当标准形","多项式","代数基本定理","根","系数","次数","不可约多项式","分裂域","伽罗瓦理论","群论","阿贝尔群","非阿贝尔群","循环群","置换群","对称群","交错群","李群","李代数","表示论"], wiki: "代数学 概念" }
+  },
+  "计算机科学": {
+    "人工智能": { words: ["机器学习","深度学习","神经网络","自然语言处理","计算机视觉","强化学习","监督学习","无监督学习","过拟合","梯度下降","反向传播","卷积网络","Transformer","大语言模型","图灵测试","感知机","支持向量机","决策树","随机森林","聚类","降维","特征工程","损失函数","优化器","学习率","批量归一化","dropout","注意力机制","词嵌入","生成对抗网络","中文房间","符号主义","连接主义","行为主义","专家系统","知识图谱","推理引擎","多智能体","AI对齐"], wiki: "人工智能 概念" },
+    "算法与数据结构": { words: ["时间复杂度","空间复杂度","排序","搜索","动态规划","贪心算法","分治","回溯","哈希","二叉树","图论","最短路径","最小生成树","红黑树","快速排序","归并排序","二分查找","广度优先","深度优先","拓扑排序","并查集","线段树","树状数组","字典树","后缀数组","字符串匹配","KMP","状态压缩","莫队算法","P问题","NP问题","NP完全","NP难","千禧年大奖难题","停机问题","可计算性","图灵机","有限自动机","正则语言","上下文无关文法"], wiki: "算法 数据结构" },
+    "操作系统": { words: ["进程","线程","协程","并发","并行","死锁","饥饿","互斥","同步","信号量","管程","临界区","竞态条件","上下文切换","调度算法","先来先服务","短作业优先","时间片轮转","优先级调度","多级反馈队列","内存管理","虚拟内存","分页","分段","页面置换","LRU","FIFO","时钟算法","缺页中断","工作集","文件系统","inode","目录项","缓冲区","缓存","写回","写直达","设备驱动","中断","系统调用"], wiki: "操作系统 概念" },
+    "网络": { words: ["OSI七层模型","TCP/IP","TCP","UDP","IP","IPv4","IPv6","MAC地址","端口","套接字","三次握手","四次挥手","滑动窗口","拥塞控制","慢启动","拥塞避免","快速重传","快速恢复","HTTP","HTTPS","TLS","SSL","DNS","DHCP","ARP","ICMP","路由","路由器","交换机","网桥","网关","子网掩码","NAT","防火墙","CDN","负载均衡","WebSocket","REST","GraphQL","gRPC"], wiki: "计算机网络 概念" }
+  },
+  "政治学": {
+    "国际关系": { words: ["现实主义","自由主义","建构主义","均势","霸权","威慑","遏制","多边主义","双边主义","软实力","硬实力","地缘政治","民主和平论","安全困境","国际机制","国际组织","国际法","外交","制裁","干涉","主权","不干涉内政","集体安全","同盟","缓冲区","附庸国","卫星国","失败国家","脆弱国家","无赖国家","修昔底德陷阱","塔西佗陷阱","金德尔伯格陷阱","中等收入陷阱","安全共同体","安全复合体","区域主义","全球治理","跨国主义","相互依存"], wiki: "国际关系 理论" },
+    "政治理论": { words: ["主权","社会契约","自然权利","公意","消极自由","积极自由","民主","共和","宪政","法治","分权","代议制","直接民主","精英主义","多元主义","民粹主义","权威主义","极权主义","法西斯主义","保守主义","自由主义","社会主义","共产主义","无政府主义","社群主义","共和主义","公民社会","公共领域","话语伦理","协商民主","审议民主","参与式民主","激进民主","多元文化主义","身份政治","差异政治","承认政治","优绩主义","能力进路","分配正义"], wiki: "政治理论 概念" },
+    "比较政治": { words: ["比较政治学","政体类型","民主","威权","极权","半民主","混合政体","总统制","议会制","半总统制","一党制","多党制","两党制","选举制度","多数代表制","比例代表制","混合选举制","政党制度","政党体系","碎片化","离心型","向心型","联邦制","单一制","邦联制","地方分权","中央集权","立法权","行政权","司法权","违宪审查","司法审查","宪法法院","利益集团","法团主义","多元主义","政治文化","公民文化","政治社会化"], wiki: "比较政治 概念" }
+  },
+  "宗教": {
+    "佛教": { words: ["四圣谛","八正道","十二因缘","五蕴","空","涅槃","轮回","业力","般若","慈悲","禅","净土","密宗","唯识","中观","三法印","三宝","五戒","八戒","菩萨","佛陀","罗汉","菩提","烦恼","无明","执着","分别","妄想","正念","正定","缘起","性空","妙有","真如","实相","法身","报身","化身","三身","一念三千","一心三观"], wiki: "佛教 概念" },
+    "基督教": { words: ["三位一体","原罪","救赎","恩典","信心","洗礼","圣餐","末世论","基督论","圣灵","教会","圣经","神学","殉道","朝圣","因信称义","预定论","恩典不可抗拒","圣徒永存","千禧年","天启","敌基督","最后的审判","天堂","地狱","炼狱","圣徒","天使","魔鬼","福音","道成肉身","复活","升天","再临","赎罪祭","代赎","称义","成圣","荣耀","团契","牧养"], wiki: "基督教 概念" },
+    "宗教学": { words: ["神圣","世俗","图腾","禁忌","仪式","神话","祭司","萨满","救赎","解脱","冥想","祈祷","朝圣","宗教经验","比较宗教","宗教社会学","宗教心理学","宗教现象学","宗教哲学","世俗化","原教旨主义","灵恩运动","新兴宗教","邪教","宗教多元主义","宗教排他主义","宗教包容主义","宗教对话","宗教自由","政教分离","宗教市场论","宗教经济","宗教资本","宗教网络","宗教群体","宗教认同","宗教边界","宗教边界建构","宗教社会化","宗教濡化"], wiki: "宗教学 概念" },
+    "伊斯兰教": { words: ["安拉","穆罕默德","古兰经","圣训","五功","念功","礼功","斋功","课功","朝功","逊尼派","什叶派","苏菲派","伊玛目","哈里发","乌玛","沙里亚","法基赫","穆夫提","凯拉姆","认主学","末世学","天园","火狱","天使","精灵","吉卜利勒","米卡伊勒","前定","自由意志","圣战","吉哈德","更大圣战","更小圣战","清真","哈拉姆","麦加","麦地那","耶路撒冷","克尔白","朝觐"], wiki: "伊斯兰教 概念" }
+  }
+};
+
+/* ===== 表达训练提示库 ===== */
+const PROMPTS = [
+  (w) => `用「${w}」开头，写一段你对这个概念的理解，不少于三句话。`,
+  (w) => `回忆一个让你联想到「${w}」的生活场景，描述画面、声音和你的感受。`,
+  (w) => `如果「${w}」是一种颜色或声音，它会是什么？展开联想写一段话。`,
+  (w) => `用「${w}」给三年后的自己写一句话，说说你希望如何与这个概念共处。`,
+  (w) => `写一段两人对话，让他们因为「${w}」产生分歧或达成共识。`,
+  (w) => `以「${w}」为题写一首四行小诗，诗中不直接出现这个词。`,
+  (w) => `描述一个你想改变的与「${w}」有关的习惯，写下改变的第一步。`,
+  (w) => `用「${w}」造三个句子，分别表达肯定、怀疑和渴望。`,
+  (w) => `想象「${w}」有形状和温度，它摸起来是什么感觉？用文字描摹。`,
+  (w) => `写一段独白，让「${w}」这个概念对你说话，它会告诉你什么？`,
+  (w) => `用「${w}」描述你此刻的状态，越具体越好，包含身体感受。`,
+  (w) => `如果要把「${w}」送给一个重要的人，你会送给谁？附上一句赠言。`,
+  (w) => `反驳一句关于「${w}」的常见看法，写出你的理由。`,
+  (w) => `用「${w}」解释一个你最近遇到的困惑，看看能否获得新视角。`,
+  (w) => `写一个以「${w}」为核心的微小说开头，不超过 100 字。`
+];
+
+// 思考题题库（8道精选，每次随机显示一道）
+const THINK_QUESTIONS = [
+  (w) => `你第一次接触「${w}」是什么时候？当时的理解和现在有什么不同？`,
+  (w) => `用一个你亲身经历的具体例子来解释「${w}」。`,
+  (w) => `「${w}」的对立面是什么？两者之间的边界在哪里？`,
+  (w) => `如果用「${w}」来分析你最近遇到的一个困惑，会得出什么结论？`,
+  (w) => `你认同关于「${w}」的主流看法吗？说出你的理由。`,
+  (w) => `「${w}」如何影响你的决策？举一个真实例子。`,
+  (w) => `写一段反驳「${w}」的论证，看看能否自圆其说。`,
+  (w) => `如果要向一个完全不懂的人介绍「${w}」，你会怎么说？`
+];
+
+// 表达记录存储
+let expressionRecords = JSON.parse(localStorage.getItem('wordGenRecords_v1') || '[]');
+let currentThinkQuestions = []; // 当前显示的思考题
+
+function saveExpressionRecord(type, word, content, question) {
+  const now = new Date();
+  const timeStr = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const record = {
+    id: Date.now(),
+    type: type, // 'record' | 'think'
+    word: word,
+    major: currentMajor || '全领域',
+    sub: currentSub || (mode === 'all' ? '随机' : '随机领域'),
+    content: content,
+    question: question || null,
+    time: timeStr
+  };
+  expressionRecords.unshift(record);
+  if (expressionRecords.length > 200) expressionRecords = expressionRecords.slice(0, 200);
+  localStorage.setItem('wordGenRecords_v1', JSON.stringify(expressionRecords));
+  return record;
+}
+
+function getCurrentPath() {
+  if (mode === 'all') return '全领域随机';
+  if (mode === 'article') return '自选文章';
+  if (currentSub) return `${currentMajor} / ${currentSub}`;
+  return `${currentMajor} / 随机领域`;
+}
+
+function renderRecordLog(containerId, type) {
+  const list = $(containerId);
+  const records = expressionRecords.filter(r => r.type === type);
+  if (records.length === 0) {
+    list.innerHTML = '<div class="record-log-empty">暂无记录，写下你的第一条吧</div>';
+    return;
+  }
+  list.innerHTML = records.slice(0, 20).map(r => `
+    <div class="record-log-item">
+      <div class="rli-meta">
+        <span class="rli-word">${r.word}</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span class="rli-time">${r.time}</span>
+          <button class="rli-delete" data-del-id="${r.id}" title="删除">×</button>
+        </span>
+      </div>
+      ${r.question ? `<div class="rli-question">Q: ${r.question}</div>` : ''}
+      <div class="rli-content">${r.content.replace(/\n/g, '<br>')}</div>
+    </div>
+  `).join('');
+  // 绑定删除按钮
+  list.querySelectorAll('.rli-delete').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = parseInt(btn.dataset.delId);
+      expressionRecords = expressionRecords.filter(r => r.id !== id);
+      localStorage.setItem('wordGenRecords_v1', JSON.stringify(expressionRecords));
+      renderRecordLog(containerId, type);
+      showToast('已删除');
+    });
+  });
+}
+
+// ===== 词库管理（分层级） =====
+let libLevel = 'source'; // source | major | sub | words
+let libSource = null; // builtin | online | article
+let libMajor = null;
+let libSub = null;
+let libSearchText = '';
+let articleFrom = 'home'; // 文章拆解界面的来源：'home' | 'word'
+
+function getLibraryStats() {
+  let builtin = 0, online = 0, article = 0;
+  for (const major in TOPICS)
+    for (const sub in TOPICS[major])
+      builtin += TOPICS[major][sub].words.filter(w => !deletedBuiltin.has(w)).length;
+  for (const key in onlineWords) online += onlineWords[key].length;
+  article = articleWords.length;
+  return { builtin, online, article };
+}
+
+function getLibMajorList(source) {
+  const majors = new Set();
+  if (source === 'builtin') {
+    for (const m in TOPICS) majors.add(m);
+  } else if (source === 'online') {
+    for (const key in onlineWords) {
+      if (key.startsWith('__')) majors.add('全部领域');
+      else majors.add(key.split('/')[0]);
+    }
+  } else if (source === 'article') {
+    majors.add('文章拆解');
+  }
+  return [...majors];
+}
+
+function getLibSubList(source, major) {
+  const subs = new Set();
+  if (source === 'builtin') {
+    for (const s in TOPICS[major]) subs.add(s);
+  } else if (source === 'online') {
+    for (const key in onlineWords) {
+      if (key.startsWith('__') && major === '全部领域') subs.add(key === '__all__' ? '全领域随机' : '文章模式');
+      else if (key.split('/')[0] === major) subs.add(key.split('/')[1] || '随机领域');
+    }
+  } else if (source === 'article') {
+    subs.add('全部文章词');
+  }
+  return [...subs];
+}
+
+function getLibWords(source, major, sub) {
+  const words = [];
+  if (source === 'builtin') {
+    TOPICS[major][sub].words.forEach(w => {
+      if (!deletedBuiltin.has(w)) words.push({ word: w, source, cat: `${major}/${sub}` });
+    });
+  } else if (source === 'online') {
+    let key;
+    if (major === '全部领域') key = sub === '全领域随机' ? '__all__' : '__article__';
+    else key = `${major}/${sub === '随机领域' ? '__random__' : sub}`;
+    (onlineWords[key] || []).forEach(w => words.push({ word: w, source, cat: key }));
+  } else if (source === 'article') {
+    articleWords.forEach(a => words.push({ word: a.word, source, cat: '文章拆解' }));
+  }
+  return words;
+}
+
+function renderLibrary() {
+  const stats = getLibraryStats();
+  $('libCountBuiltin').textContent = stats.builtin;
+  $('libCountOnline').textContent = stats.online;
+  $('libCountArticle').textContent = stats.article;
+
+  // 面包屑
+  const bc = [];
+  bc.push('<span class="bc-item" data-bc="source">词库</span>');
+  if (libSource) bc.push(`<span class="bc-sep">›</span><span class="bc-item" data-bc="major">${libSource === 'builtin' ? '内置词' : libSource === 'online' ? '搜索词' : '文章词'}</span>`);
+  if (libMajor) bc.push(`<span class="bc-sep">›</span><span class="bc-item" data-bc="sub">${libMajor}</span>`);
+  if (libSub) bc.push(`<span class="bc-sep">›</span><span>${libSub}</span>`);
+  $('libBreadcrumb').innerHTML = bc.join('');
+  $('libBreadcrumb').querySelectorAll('.bc-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const level = el.dataset.bc;
+      if (level === 'source') { libLevel = 'source'; libSource = null; libMajor = null; libSub = null; }
+      else if (level === 'major') { libLevel = 'major'; libMajor = null; libSub = null; }
+      else if (level === 'sub') { libLevel = 'sub'; libSub = null; }
+      renderLibrary();
+    });
+  });
+
+  // 显示对应层级
+  $('libSourceSection').style.display = libLevel === 'source' ? '' : 'none';
+  $('libMajorSection').style.display = libLevel === 'major' ? '' : 'none';
+  $('libSubSection').style.display = libLevel === 'sub' ? '' : 'none';
+  $('libWordSection').style.display = libLevel === 'words' ? '' : 'none';
+
+  if (libLevel === 'source') {
+    $('libSourceGrid').innerHTML = [
+      { key: 'builtin', name: '内置词库', count: stats.builtin, color: 'var(--accent)' },
+      { key: 'online', name: '搜索词库', count: stats.online, color: 'var(--accent-2)' },
+      { key: 'article', name: '文章词库', count: stats.article, color: 'var(--accent-3)' }
+    ].map(s => `<button class="major-btn" data-src="${s.key}" style="border-color:${s.color}33;color:${s.color};">${s.name}<span style="font-size:10px;opacity:.7;margin-left:4px;">${s.count}</span></button>`).join('');
+    $('libSourceGrid').querySelectorAll('.major-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        libSource = btn.dataset.src;
+        libLevel = 'major';
+        renderLibrary();
+      });
+    });
+  } else if (libLevel === 'major') {
+    const majors = getLibMajorList(libSource);
+    $('libMajorGrid').innerHTML = majors.map(m => `<button class="major-btn">${m}</button>`).join('');
+    $('libMajorGrid').querySelectorAll('.major-btn').forEach((btn, i) => {
+      btn.addEventListener('click', () => {
+        libMajor = majors[i];
+        libLevel = 'sub';
+        renderLibrary();
+      });
+    });
+  } else if (libLevel === 'sub') {
+    const subs = getLibSubList(libSource, libMajor);
+    $('libSubList').innerHTML = subs.map(s => `<button class="sub-btn">${s}</button>`).join('');
+    $('libSubList').querySelectorAll('.sub-btn').forEach((btn, i) => {
+      btn.addEventListener('click', () => {
+        libSub = subs[i];
+        libLevel = 'words';
+        libSearchText = '';
+        $('libSearch').value = '';
+        renderLibrary();
+      });
+    });
+  } else if (libLevel === 'words') {
+    $('libWordTitle').textContent = `${libMajor} / ${libSub}（${getLibWords(libSource, libMajor, libSub).length}词）`;
+    renderLibWordList();
+  }
+}
+
+function renderLibWordList() {
+  let words = getLibWords(libSource, libMajor, libSub);
+  if (libSearchText) words = words.filter(w => w.word.includes(libSearchText));
+  const list = $('libList');
+  if (words.length === 0) {
+    list.innerHTML = '<div class="lib-empty">没有找到匹配的词汇</div>';
+    return;
+  }
+  const display = words.slice(0, 300);
+  list.innerHTML = display.map(w => `
+    <div class="lib-item">
+      <span class="li-word">${w.word}</span>
+      <div class="li-meta">
+        <span class="li-source ${w.source}">${w.source === 'builtin' ? '内置' : w.source === 'online' ? '搜索' : '文章'}</span>
+        <button class="li-del" data-word="${w.word}" data-source="${w.source}" data-cat="${w.cat}" title="删除">×</button>
+      </div>
+    </div>
+  `).join('') + (words.length > 300 ? `<div class="lib-empty" style="padding:16px;">共 ${words.length} 条，仅显示前300条</div>` : '');
+  list.querySelectorAll('.li-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      deleteLibraryWord(btn.dataset.word, btn.dataset.source, btn.dataset.cat);
+    });
+  });
+}
+
+function deleteLibraryWord(word, source, cat) {
+  if (source === 'builtin') {
+    deletedBuiltin.add(word);
+    localStorage.setItem('wordGenDeleted_v1', JSON.stringify([...deletedBuiltin]));
+  } else if (source === 'online') {
+    if (onlineWords[cat]) {
+      onlineWords[cat] = onlineWords[cat].filter(w => w !== word);
+      if (onlineWords[cat].length === 0) delete onlineWords[cat];
+      localStorage.setItem('wordGenOnlineWords_v1', JSON.stringify(onlineWords));
+    }
+  } else if (source === 'article') {
+    articleWords = articleWords.filter(a => a.word !== word);
+    localStorage.setItem('wordGenArticleWords_v1', JSON.stringify(articleWords));
+  }
+  showToast(`已删除「${word}」`);
+  renderLibWordList();
+  const stats = getLibraryStats();
+  $('libCountBuiltin').textContent = stats.builtin;
+  $('libCountOnline').textContent = stats.online;
+  $('libCountArticle').textContent = stats.article;
+}
+
+function generateThinkQuestions(word) {
+  // 随机抽取一道思考题，避免与当前重复
+  let idx;
+  do {
+    idx = Math.floor(Math.random() * THINK_QUESTIONS.length);
+  } while (currentThinkQuestions.length > 0 && THINK_QUESTIONS[idx](word) === currentThinkQuestions[0] && THINK_QUESTIONS.length > 1);
+  currentThinkQuestions = [THINK_QUESTIONS[idx](word)];
+  $('thinkList').innerHTML = `<div class="think-item"><span class="ti-num">Q</span><span>${currentThinkQuestions[0]}</span></div>`;
+}
+
+const SAMPLE_ARTICLE = `秋天的黄昏，来得比夏天更早一些。五点刚过，天边就泛起了一层橘红色的光，像有人在云层后面点燃了一盏巨大的灯。风从窗缝里钻进来，带着桂花的甜香，也带着一丝凉意。我坐在书桌前，面前摊着一本读了一半的书。书页已经泛黄，边角微微卷起，那是反复翻阅留下的痕迹。窗外的梧桐叶开始飘落，一片一片，像蝴蝶在空中盘旋，然后轻轻落在地面上。记忆总是在这样的时刻涌上来。小时候，每到秋天，外婆就会在院子里晒桂花。她把桂花铺在竹匾里，放在阳光下，整个院子都弥漫着那种温暖的甜香。外婆说，桂花要晒三天，才能用来做桂花糕。她做的桂花糕，软糯香甜，是我童年最美好的味道之一。后来我离开了家乡，去了很远的城市读书、工作。秋天还是会来，桂花还是会开，但那种院子里的甜香，却再也没有闻到过。时间是一条单向的河流，我们都是渡河的人。有些东西被留在了对岸，有些东西被我们带在身上。`;
+
+const STOP_WORDS = new Set(["的","了","和","是","在","我","有","他","她","它","们","也","就","都","而","及","与","或","一个","没有","我们","你们","他们","这个","那个","这些","那些","自己","什么","怎么","这样","那样","因为","所以","但是","可是","然后","还是","就是","不是","可以","可能","应该","需要","已经","正在","将要","一下","一些","一样","一直","一定","一般","一起","时候","地方","东西","事情","问题","办法","样子","感觉","觉得","知道","认为","看到","听到","说到","做到","找到","得到","显得","使得","进行","开始","结束","继续","保持","出现","发生","存在","具有","拥有","属于","成为","变成","关于","对于","由于","通过","根据","按照","随着","为了","除了","包括","以及","并且","或者","虽然","然而","因此","于是","接着","最后","首先","其次","此外","另外","同时","反而","甚至","尤其","特别","比较","更加","最","太","很","非常","十分","极其","相当","几乎","大概","大约","也许","或许","恐怕","显然","当然","的确","确实","真正","其实","实际上","事实上","基本上","如今","现在","目前","刚才","刚刚","曾经","过去","从前","以前","当初","起初","最初","渐渐","逐渐","慢慢","缓缓","忽然","突然","猛然","顿时","霎时","刹那","瞬间","片刻","不久","很快","立刻","马上","立即","随即","终于","到底","究竟","毕竟","终归","反正","左右","高低","好歹","优劣","成败","得失","利弊","真假","对错","是非","好坏","美丑","善恶","新旧","男女","阴阳","昼夜","朝夕","早晚","迟早","远近","深浅","厚薄","宽窄","长短","大小","多少","轻重","缓急","快慢","冷热","干湿","软硬","强弱","刚柔","生死","存亡","兴衰","荣辱","贫富","明暗","清浊","整乱","聚散","分合","开闭","起止","始终","首尾","本末","因果","条件","前提","基础","根本","关键","核心","重点","中心","焦点","主题","主旨","要点","纲领","大纲","大概","大致","估计","预计","预期","预料","设想","假设","假定","假如","如果","若是","倘若","要是","万一","一旦","只要","只有","除非","非但","不仅","不但","不光","不只","不止","何止","何况","况且","加之","此外","另外","还有","连同","乃至","甚而","以至","以致","致使","导致","造成","引起","引发","带来","产生","形成","所谓","据悉","据说","传闻","报道","声称","宣称","表示","表明","显示","揭示","透露","披露","公开","宣布","宣告","扬言","坦言","直言","被","把","将","让","给","叫","令","使","由","归","以","用","凭","靠","拿","从","自","打","沿","顺","向","往","朝","到","至","达","临","将近","快要","将","即将","就要","正要","才","便","即","旋","的话","来说","而言","来讲","说来","之","乎","者","也","矣","焉","哉","耶","耳","尔","汝","若","乃","其","此","彼","是","兹","斯","伊","余","予","吾","俺","咱","侬","他","她","它","咱们","人家","别人","旁人","他人","大家","众人","诸位","各位","诸君","各自","各个","每个","每","各","某","某些","有的","有些","有人","有时","一切","所有","全部","全体","整体","整个","完全","全然","统统","通通","全","都","共","总","总共","总计","凡","凡是","大凡","举凡","像","似","如","跟","同","和","及","以及","甚至","以至于","说实在的","说真的","说实话","说白了","坦白说","老实说","那种","这种","一下","一起","一边","一面","一来","这么","那么","怎样","怎么样","什么样","谁","哪","哪里","哪儿","哪些","哪个","多","多少","几","俩","仨","亿","万","千","百","十","个","只","支","本","张","片","条","根","块","颗","粒","件","套","双","对","群","批","堆","种","类","门","堂","场","次","回","遍","下","趟","遭","番","阵","顿","页","行","列","排","层","级","档","路","道","面","边","方","角","端","头","顶","底","这","那","此","彼","其","之","以","于","为","所","者","也","矣","焉","哉","乎","欤","耶","耳","尔","汝","若","乃","伊","余","予","吾","俺","咱","侬","他","她","它","俺","咱","咱们","我们","你们","他们","她们","它们","人家","别人","旁人","他人","大家","众人","大伙","大家伙儿","诸位","各位","列位","诸君","大家","各自","各个","每个","每","各","某","某些","某某","有的","有些","有人","有时","有些","有的是","一切","所有","全部","全体","整体","整个","完整","完全","全然","统统","通通","全","都","共","总","总共","总计","合计","共计","凡","凡是","大凡","但凡","举凡","但凡","只要","只有","除非","除了","除去","除开","除此之外","除此以外","除此而外","非但","不仅","不但","不光","不单","不只","不止","何止","何况","况且","并且","而且","况且","加之","再加上","此外","另外","还有","以及","连同","和","跟","同","与","及","以及","乃至","甚至","甚而","甚至于","以至","以至于","以致","致使","导致","造成","引起","引发","带来","产生","发生","出现","形成","变成","成为","是","为","乃","即","系","属","算","称得上","算得上","所谓","所说","所言","所云","据悉","据说","传闻","传言","消息","报道","称","声称","宣称","表示","表明","显示","揭示","透露","披露","泄露","公开","宣布","宣告","宣称","声称","扬言","婉言","坦言","直言","坦言","实言","真言","谎言","谣言","流言","传言","闲话","怪话","废话","空话","套话","老话","新话","好话","坏话","实话","虚话","黑话","暗话","行话","术语","被","把","将","让","给","叫","令","使","由","归","为","所","见","于","以","用","凭","靠","拿","从","自","自从","打","由","沿","顺","向","往","朝","对着","冲着","至于","到","至","达","抵","临","濒临","接近","靠近","临近","将近","快要","将","即将","就要","将要","正要","刚","刚刚","方才","才","就","便","即","旋","随即","立刻","马上","立即","当即","顿时","霎时","刹那","瞬间","片刻","一会儿","一阵子","好久","很久","不久","很快","忽然","突然","猛然","骤然","猝然","蓦地","忽地","霍地","唰地","嗖地","呼地","轰地","哗地","嗖","呼","轰","哗","唰","咚","铛","铃","叮","当","吱","嘎","咔","啪","噼","砰","咚","隆","鸣","啸","吟","嘶","嚎","啼","鸣","吠","喵","咩","哞","嗷","咻","嗖","呼","嘘","哧","嘟","呜","哎","唉","呀","啊","哇","哈","嘿","嗨","哟","哦","噢","喔","嗯","哼","呣","呸","啐","咄","嗟","吓","嘘","哧","嘟","呜","哎","唉","呀","啊","哇","哈","嘿","嗨","哟","哦","噢","喔","嗯","哼","呣","呸","啐","咄","嗟","吓","嘘","哧","嘟","呜","哎","唉","呀","啊","哇","哈","嘿","嗨","哟","哦","噢","喔","嗯","哼","呣","呸","啐","咄","嗟","吓","嘘","哧","嘟","呜"]);
+// 泛词性/常识性两字词过滤（适用于搜索和文章拆解）
+const GENERIC_WORDS = new Set(["实体","知识","粉丝","用户","客户","品牌","产品","服务","市场","行业","领域","范围","程度","水平","能力","素质","品质","精神","思想","意识","观念","价值","意义","目标","理想","信念","态度","情绪","感受","体验","记忆","想象","创造","发现","研究","分析","解决","发展","变化","影响","作用","关系","结构","功能","特点","特征","属性","类型","种类","形式","内容","过程","阶段","环节","因素","条件","基础","前提","保障","支持","帮助","工作","生活","学习","时间","世界","国家","社会","文化","历史","科学","艺术","经济","政治","法律","教育","医疗","健康","环境","技术","信息","数据","系统","方法","理论","实践","经验","问题","事情","东西","地方","时候","人家","大家","别人","孩子","女人","男人","老师","学生","朋友","家人","结果","效果","效率","质量","价格","成本","利润","效益","成绩","成就","进步","提升","改善","优化","创新","改革","变革","转型","升级","整合","协作","合作","竞争","策略","规划","计划","方案","模式","标准","规范","制度","流程","体系","机制","框架","模型","指标","报表","统计","评估","考核","激励","奖励","惩罚","管理","治理","监管","监督","审核","审批","认证","许可","资质","资格","方向","趋势","潮流","热点","焦点","重点","难点","需求","场景","案例","实例","示例","模板","样式","格式","规则","原则","工具","平台","渠道","路径","方法","办法","措施","手段","技术","技能","技巧","专业","职业","产业","类型","种类","形式","内容","过程","阶段","环节","因素","条件","基础","前提","保障","支持","帮助","服务","产品","市场","用户","客户","品牌","质量","价格","成本","利润","效益","效率","效果","结果","成果","成就","成绩","进步","提升","改善","优化","创新","改革","变革","转型","升级","整合","协作","合作","竞争","策略","规划","计划","方案","模式","标准","规范","制度","流程","体系","机制","框架","模型","指标","数据","报表","统计","评估","考核","激励","奖励","惩罚","管理","治理","监管","监督","审核","审批","认证","许可","资质","资格","能力","水平","程度","范围","领域","行业","产业","职业","专业","技能","技巧","方法","办法","措施","手段","工具","平台","渠道","路径","方向","趋势","潮流","热点","焦点","重点","难点","痛点","需求","场景","案例","实例","示例","模板","样式","格式","规范","标准","规则","原则","事物","物质","意识","存在","思维","语言","逻辑","辩证","矛盾","统一","对立","质量","数量","必然","偶然","可能","现实","现象","本质","内容","形式","原因","结果","内因","外因","主流","支流","全局","局部","整体","部分","一般","特殊","普遍","个别","绝对","相对","无限","有限","静止","运动","变化","发展","联系","区别","相同","不同","相似","差异","优点","缺点","好处","坏处","利益","风险","机会","挑战","压力","动力","阻力","助力","障碍","困难","问题","办法","方案","计划","目标","目的","意图","动机","行为","行动","动作","活动","事件","事故","事情","事务","业务","工作","任务","职责","责任","义务","权利","权力","权益","利益","福利","待遇","报酬","薪资","工资","奖金","补贴","津贴","福利","保障","保险","医疗","教育","住房","交通","通讯","能源","资源","材料","物资","设备","设施","场地","场所","空间","时间","时刻","时期","时代","年代","年份","月份","日期","时刻","分钟","秒钟","小时","白天","黑夜","早晨","中午","下午","晚上","凌晨","黎明","黄昏","季节","春天","夏天","秋天","冬天","气候","天气","温度","湿度","风力","雨水","阳光","月光","星星","月亮","太阳","地球","世界","宇宙","空间","时间","物质","能量","力量","速度","方向","位置","距离","面积","体积","重量","密度","硬度","强度","韧性","弹性","塑性","粘性","流动性","挥发性","溶解性","导电性","导热性","磁性","光学","声学","力学","热学","电学","化学","生物学","生理学","心理学","社会学","经济学","政治学","法学","教育学","管理学","传播学","语言学","文学","史学","哲学","数学","物理学","化学","天文学","地理学","地质学","生态学","环境学","医学","药学","农学","林学","畜牧学","兽医学","工程学","计算机科学","信息科学","材料科学","能源科学","航空航天","海洋科学","军事学","体育学","艺术学","音乐学","美术学","设计学","建筑学","城市规划","风景园林"]);
+
+/* ===== 状态 ===== */
+let mode = 'topic'; // 'topic' | 'all' | 'article'
+let currentMajor = null;
+let currentSub = null;
+let currentWord = null;
+let currentSource = 'builtin';
+let onlineWords = JSON.parse(localStorage.getItem('wordGenOnlineWords_v1') || '{}');
+let articleWords = JSON.parse(localStorage.getItem('wordGenArticleWords_v1') || '[]'); // 所有文章拆解过的词 [{word, freq, source}]
+let deletedBuiltin = new Set(JSON.parse(localStorage.getItem('wordGenDeleted_v1') || '[]'));
+let articleData = null; // { keywords: [{word,freq}], related: [词] }
+let articleUsedWords = new Set(); // 文章模式下已用过的文章词
+// 加权词库阶段：新词库（搜索/文章）优先加权抽取，达到阈值后切换为混合平权
+let poolPhase = 'normal'; // 'normal' | 'boost'
+let boostSource = null; // 'online' | 'article' — 加权词库来源
+let boostWords = []; // 加权词列表 [{word, freq?}]
+let boostDrawCount = 0; // 加权阶段已抽取次数
+const BOOST_THRESHOLD = 1.5; // 每个加权词平均出现1.5次后切换为混合模式
+let history = JSON.parse(localStorage.getItem('wordGenHistory_v4') || '[]');
+
+/* ===== DOM ===== */
+const $ = (id) => document.getElementById(id);
+const views = { home: $('view-home'), topic: $('view-topic'), word: $('view-word'), article: $('view-article'), record: $('view-record'), think: $('view-think'), library: $('view-library'), 'article-records': $('view-article-records') };
+
+/* ===== 视图切换 ===== */
+function showView(name) {
+  Object.values(views).forEach(v => v.classList.remove('active'));
+  views[name].classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+/* ===== 工具 ===== */
+function showToast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+function poolKey() {
+  if (mode === 'all') return '__all__';
+  if (mode === 'article') return '__article__';
+  return currentSub ? `${currentMajor}/${currentSub}` : `${currentMajor}/__random__`;
+}
+
+/* 获取当前抽取池 */
+function getPool() {
+  // boost 模式：加权词 + 内置词（加权词标记 boost 来源）
+  if (poolPhase === 'boost' && boostWords.length > 0) {
+    const boost = boostWords.map(k => ({ word: k.word, source: boostSource, freq: k.freq || 1, isBoost: true }));
+    let builtin = [];
+    if (mode === 'all' || (mode === 'article' && !articleData)) {
+      for (const major in TOPICS)
+        for (const sub in TOPICS[major])
+          builtin = builtin.concat(TOPICS[major][sub].words.map(w => ({ word: w, source: 'builtin' })));
+    } else if (mode === 'article' && articleData) {
+      builtin = articleData.related.map(w => ({ word: w, source: 'builtin' }));
+    } else if (currentSub) {
+      builtin = TOPICS[currentMajor][currentSub].words.map(w => ({ word: w, source: 'builtin' }));
+    } else {
+      for (const sub in TOPICS[currentMajor])
+        builtin = builtin.concat(TOPICS[currentMajor][sub].words.map(w => ({ word: w, source: 'builtin' })));
+    }
+    const online = (onlineWords[poolKey()] || []).filter(w => !boostWords.some(b => b.word === w)).map(w => ({ word: w, source: 'online' }));
+    const seen = new Set();
+    return [...boost, ...builtin, ...online].filter(item => {
+      if (seen.has(item.word)) return false;
+      seen.add(item.word);
+      return true;
+    });
+  }
+  if (mode === 'article' && articleData) {
+    const article = articleData.keywords.map(k => ({ word: k.word, source: 'article', freq: k.freq }));
+    const related = articleData.related.map(w => ({ word: w, source: 'builtin' }));
+    const seen = new Set();
+    return [...article, ...related].filter(item => {
+      if (seen.has(item.word)) return false;
+      seen.add(item.word);
+      return true;
+    });
+  }
+  let builtin = [];
+  if (mode === 'all') {
+    for (const major in TOPICS)
+      for (const sub in TOPICS[major])
+        builtin = builtin.concat(TOPICS[major][sub].words.map(w => ({ word: w, source: 'builtin' })));
+  } else if (currentSub) {
+    builtin = TOPICS[currentMajor][currentSub].words.map(w => ({ word: w, source: 'builtin' }));
+  } else {
+    for (const sub in TOPICS[currentMajor])
+      builtin = builtin.concat(TOPICS[currentMajor][sub].words.map(w => ({ word: w, source: 'builtin' })));
+  }
+  const online = (onlineWords[poolKey()] || []).map(w => ({ word: w, source: 'online' }));
+  const seen = new Set();
+  return [...builtin, ...online].filter(item => {
+    if (seen.has(item.word)) return false;
+    seen.add(item.word);
+    return true;
+  });
+}
+
+/* 获取弹幕词汇 */
+function getMarqueeWords() {
+  if (mode === 'article' && articleData) {
+    // 文章模式：文章关键词高亮 + 相关领域词
+    return {
+      highlight: articleData.keywords.map(k => k.word),
+      normal: articleData.related
+    };
+  }
+  let words = [];
+  if (mode === 'all') {
+    for (const major in TOPICS)
+      for (const sub in TOPICS[major])
+        words.push(...TOPICS[major][sub].words);
+  } else if (currentSub) {
+    words = TOPICS[currentMajor][currentSub].words;
+  } else {
+    for (const sub in TOPICS[currentMajor])
+      words.push(...TOPICS[currentMajor][sub].words);
+  }
+  return { highlight: [], normal: words };
+}
+
+/* ===== 弹幕条渲染 ===== */
+function renderMarquee() {
+  const { highlight, normal, boostHighlight } = getMarqueeWords();
+  const hlSet = new Set(highlight);
+  const allWords = [...highlight, ...normal].sort(() => Math.random() - 0.5);
+  if (allWords.length === 0) return;
+
+  const makeHtml = (arr) => arr.map(w => {
+    const cls = hlSet.has(w) ? (boostHighlight ? 'boost-online' : 'hl') : '';
+    return `<span class="marquee-item ${cls}">${w}</span>`;
+  }).join('');
+
+  const html1 = makeHtml(allWords);
+  $('marquee1').innerHTML = html1 + html1;
+  const shuffled2 = [...allWords].sort(() => Math.random() - 0.5);
+  const html2 = makeHtml(shuffled2);
+  $('marquee2').innerHTML = html2 + html2;
+
+  // 基于实际渲染宽度统一像素速度，确保所有界面/两行速度一致
+  const PIXEL_SPEED = 42; // 像素/秒
+  requestAnimationFrame(() => {
+    const w1 = $('marquee1').offsetWidth;
+    const w2 = $('marquee2').offsetWidth;
+    if (w1 > 0) $('marquee1').style.animationDuration = Math.max(15, w1 / 2 / PIXEL_SPEED) + 's';
+    if (w2 > 0) $('marquee2').style.animationDuration = Math.max(15, w2 / 2 / PIXEL_SPEED) + 's';
+  });
+}
+
+/* ===== 主题选择 ===== */
+function renderMajorGrid() {
+  const grid = $('majorGrid');
+  grid.innerHTML = Object.keys(TOPICS).map(name =>
+    `<button class="major-btn ${name === currentMajor ? 'active' : ''}" data-name="${name}">${name}</button>`
+  ).join('');
+  grid.querySelectorAll('.major-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentMajor = btn.dataset.name;
+      currentSub = null;
+      renderMajorGrid();
+      renderSubList();
+      $('subSection').style.display = '';
+      $('topicRandomBtn').disabled = false;
+    });
+  });
+}
+
+function renderSubList() {
+  if (!currentMajor) return;
+  const subs = Object.keys(TOPICS[currentMajor]);
+  const list = $('subList');
+  list.innerHTML =
+    `<button class="sub-btn random-sub ${currentSub === null ? 'active' : ''}" data-sub="__random__">随机领域</button>` +
+    subs.map(name =>
+      `<button class="sub-btn ${name === currentSub ? 'active' : ''}" data-sub="${name}">${name}</button>`
+    ).join('');
+  list.querySelectorAll('.sub-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = btn.dataset.sub;
+      currentSub = val === '__random__' ? null : val;
+      renderSubList();
+    });
+  });
+}
+
+/* ===== 词汇展示 ===== */
+function pickRandomWord() {
+  const pool = getPool();
+  if (pool.length === 0) { showToast('词汇池为空'); return; }
+
+  let item;
+
+  // boost 模式：加权词优先抽取，达到阈值后切换为混合平权
+  if (poolPhase === 'boost' && boostWords.length > 0) {
+    const threshold = boostWords.length * BOOST_THRESHOLD;
+    if (boostDrawCount < threshold) {
+      // 加权阶段：从加权词中按频次加权抽取
+      const boostItems = pool.filter(i => i.isBoost);
+      if (boostItems.length > 0) {
+        const totalWeight = boostItems.reduce((s, i) => s + (i.freq || 1), 0);
+        let r = Math.random() * totalWeight;
+        for (const bi of boostItems) {
+          r -= (bi.freq || 1);
+          if (r <= 0) { item = bi; break; }
+        }
+        if (!item) item = boostItems[0];
+        boostDrawCount++;
+      }
+    } else {
+      // 达到阈值，切换为混合平权模式
+      poolPhase = 'normal';
+      renderMarquee();
+      showToast('已切换为混合词库（内置+新词）平权抽取');
+    }
+  }
+
+  // 非 boost 或 boost 刚切换后：普通抽取逻辑
+  if (!item) {
+    if (mode === 'article' && articleData && poolPhase === 'normal') {
+      const articleItems = pool.filter(i => i.source === 'article' && !articleUsedWords.has(i.word));
+      if (articleItems.length > 0) {
+        const totalWeight = articleItems.reduce((s, i) => s + (i.freq || 1), 0);
+        let r = Math.random() * totalWeight;
+        for (const ai of articleItems) {
+          r -= (ai.freq || 1);
+          if (r <= 0) { item = ai; break; }
+        }
+        if (!item) item = articleItems[0];
+      } else {
+        const relatedItems = pool.filter(i => i.source !== 'article');
+        if (relatedItems.length > 0) {
+          item = relatedItems[Math.floor(Math.random() * relatedItems.length)];
+        } else {
+          item = pool[Math.floor(Math.random() * pool.length)];
+        }
+      }
+    } else {
+      let attempts = 0;
+      do {
+        item = pool[Math.floor(Math.random() * pool.length)];
+        attempts++;
+      } while (item.word === currentWord && pool.length > 1 && attempts < 10);
+    }
+  }
+
+  if (item.source === 'article') articleUsedWords.add(item.word);
+  displayWord(item.word, item.source, item.isBoost);
+}
+
+function displayWord(word, source, isBoost) {
+  currentWord = word;
+  currentSource = source;
+
+  const el = $('theWord');
+  el.textContent = word;
+  el.classList.remove('flash', 'boost-online');
+  void el.offsetWidth;
+  el.classList.add('flash');
+  if (isBoost || (poolPhase === 'boost' && boostWords.some(b => b.word === word))) {
+    el.classList.add('boost-online');
+  }
+
+  const badge = $('sourceBadge');
+  badge.style.display = 'inline-block';
+  // boost 模式下标签显示加权词库名称
+  if (poolPhase === 'boost' && boostSource) {
+    badge.className = `source-badge boost-online`;
+    badge.textContent = boostSource === 'online' ? '搜索词库' : '文章词库';
+  } else if (poolPhase === 'normal' && boostSource && boostWords.length > 0) {
+    // 混合模式：显示"内置+搜索/文章"
+    badge.className = `source-badge mixed`;
+    badge.textContent = boostSource === 'online' ? '内置+搜索词库' : '内置+文章词库';
+  } else {
+    badge.className = `source-badge ${source}`;
+    badge.textContent = source === 'online' ? '网络获取' : source === 'article' ? '自选文章' : '内置词库';
+  }
+
+  const path = $('wordPath');
+  if (mode === 'all') {
+    path.innerHTML = '<span class="cur">全领域随机</span>';
+  } else if (mode === 'article') {
+    path.innerHTML = '<span class="cur">自选文章词库</span>';
+  } else if (currentSub) {
+    path.innerHTML = `<span>${currentMajor}</span><span class="sep">/</span><span class="cur">${currentSub}</span>`;
+  } else {
+    path.innerHTML = `<span>${currentMajor}</span><span class="sep">/</span><span class="cur">随机领域</span>`;
+  }
+
+  // 显示表达记录框
+  $('recordBox').style.display = '';
+
+  saveHistory(word, source);
+}
+
+function enterWordView() {
+  renderMarquee();
+  showView('word');
+  setTimeout(() => pickRandomWord(), 250);
+}
+
+// 从首页/主题页进入时重置 boost 状态
+function enterWordViewFresh() {
+  poolPhase = 'normal';
+  boostSource = null;
+  boostWords = [];
+  boostDrawCount = 0;
+  enterWordView();
+}
+
+/* ===== 搜索进度图层控制 ===== */
+function showSearchOverlay(title, steps) {
+  const overlay = $('searchOverlay');
+  $('soTitle').textContent = title;
+  $('soSpinner').className = 'so-spinner';
+  $('soResult').style.display = 'none';
+  $('soConfirmBtn').style.display = 'none';
+  $('soSteps').innerHTML = steps.map((s, i) =>
+    `<div class="so-step ${i === 0 ? 'active' : ''}" data-step="${i}"><span class="dot"></span>${s}</div>`
+  ).join('');
+  overlay.classList.add('show');
+}
+
+function updateSearchStep(index) {
+  const steps = $('soSteps').querySelectorAll('.so-step');
+  steps.forEach((s, i) => {
+    s.classList.remove('active', 'done');
+    if (i < index) s.classList.add('done');
+    else if (i === index) s.classList.add('active');
+  });
+}
+
+function showSearchResult(success, data) {
+  const spinner = $('soSpinner');
+  const result = $('soResult');
+  const confirmBtn = $('soConfirmBtn');
+  const steps = $('soSteps');
+
+  steps.querySelectorAll('.so-step').forEach(s => {
+    s.classList.remove('active');
+    s.classList.add('done');
+  });
+
+  if (success) {
+    spinner.className = 'so-spinner done';
+    spinner.textContent = '✓';
+    $('soTitle').textContent = '搜索完成';
+    result.innerHTML = `
+      <div class="sr-row">搜索到 <span class="num">${data.totalHits}</span> 条结果</div>
+      <div class="sr-row">新录入词库 <span class="num green">${data.newCount}</span> 个词</div>
+      ${data.preview ? `<div class="sr-preview">${data.preview}</div>` : ''}
+    `;
+  } else {
+    spinner.className = 'so-spinner error';
+    spinner.textContent = '✕';
+    $('soTitle').textContent = '搜索失败';
+    result.innerHTML = `<div class="sr-row"><span class="num red">${data.reason}</span></div>`;
+  }
+  result.style.display = '';
+  confirmBtn.style.display = '';
+  confirmBtn.onclick = () => {
+    $('searchOverlay').classList.remove('show');
+    if (success && data.newWords && data.newWords.length > 0) {
+      enterBoostMode('online', data.newWords);
+    }
+  };
+}
+
+/* ===== 进入加权词库模式 ===== */
+function enterBoostMode(source, words) {
+  poolPhase = 'boost';
+  boostSource = source;
+  boostWords = words.map(w => typeof w === 'string' ? { word: w, freq: 1 } : w);
+  boostDrawCount = 0;
+  renderMarquee();
+  pickRandomWord();
+  showToast(`已进入${source === 'online' ? '搜索' : '文章'}词库加权模式，共 ${boostWords.length} 个词`);
+}
+
+/* ===== 联网获取新词 ===== */
+async function fetchOnlineWords() {
+  const btn = $('onlineBtn');
+  const btnText = $('onlineBtnText');
+  btn.disabled = true;
+  btnText.innerHTML = '<span class="spinner"></span> 搜索中…';
+
+  showSearchOverlay('正在搜索新词', ['连接百度搜索', '筛选概念词汇', '去重并录入词库']);
+
+  try {
+    let query;
+    if (mode === 'all') query = '学术概念 专业术语';
+    else if (mode === 'article') query = articleData ? articleData.keywords.slice(0, 3).map(k => k.word).join(' ') : '学术概念';
+    else if (currentSub) query = TOPICS[currentMajor][currentSub].wiki || `${currentSub} 概念`;
+    else query = `${currentMajor} 概念`;
+
+    const key = poolKey();
+
+    updateSearchStep(0);
+    // 百度搜索：建议接口 + 结果页，总超时12秒
+    const results = await baiduSearch(query, 40);
+    const totalHits = results.length;
+
+    updateSearchStep(1);
+    await new Promise(r => setTimeout(r, 300));
+
+    // 过滤：泛词性词 + 已存在
+    const existing = new Set(getPool().map(i => i.word));
+    const newWords = [];
+    for (const title of results) {
+      if (title.length < 2 || title.length > 15) continue;
+      if (GENERIC_WORDS.has(title)) continue;
+      if (existing.has(title)) continue;
+      existing.add(title);
+      newWords.push(title);
+    }
+
+    updateSearchStep(2);
+    await new Promise(r => setTimeout(r, 200));
+
+    if (newWords.length === 0) {
+      showSearchResult(false, { reason: `百度搜索到 ${totalHits} 条结果，但均已在词库中或为通用词汇` });
+    } else {
+      if (!onlineWords[key]) onlineWords[key] = [];
+      onlineWords[key] = [...onlineWords[key], ...newWords];
+      localStorage.setItem('wordGenOnlineWords_v1', JSON.stringify(onlineWords));
+      const preview = newWords.slice(0, 5).join('、') + (newWords.length > 5 ? '…' : '');
+      showSearchResult(true, {
+        totalHits,
+        newCount: newWords.length,
+        preview,
+        newWords
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    let reason = '未知错误';
+    if (err.name === 'AbortError') reason = '搜索超时';
+    else if (err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) reason = '网络连接失败';
+    else reason = err.message || '未知错误';
+    showSearchResult(false, { reason });
+  } finally {
+    btn.disabled = false;
+    btnText.textContent = '联网获取新词';
+  }
+}
+
+/* ===== JSONP 工具 ===== */
+function jsonp(url, callbackParam, timeout) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'jsonp_cb_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+    window[cbName] = (data) => {
+      resolve(data);
+      try { delete window[cbName]; } catch(e) { window[cbName] = null; }
+      script.remove();
+    };
+    const script = document.createElement('script');
+    script.src = url + (url.includes('?') ? '&' : '?') + callbackParam + '=' + cbName;
+    script.onerror = () => {
+      reject(new Error('JSONP load failed'));
+      try { delete window[cbName]; } catch(e) { window[cbName] = null; }
+      script.remove();
+    };
+    document.head.appendChild(script);
+    setTimeout(() => {
+      if (window[cbName]) {
+        reject(new Error('JSONP timeout'));
+        try { delete window[cbName]; } catch(e) { window[cbName] = null; }
+        script.remove();
+      }
+    }, timeout || 8000);
+  });
+}
+
+/* ===== 百度搜索 ===== */
+async function baiduSearch(query, limit) {
+  limit = limit || 30;
+  const results = [];
+  const seen = new Set();
+
+  // 方式1：百度搜索建议（JSONP，速度快）
+  try {
+    const data = await jsonp(`https://suggestion.baidu.com/su?wd=${encodeURIComponent(query)}&p=3&cb=`, 'cb', 6000);
+    if (data && data.s && Array.isArray(data.s)) {
+      for (const w of data.s) {
+        const clean = w.trim().replace(/<[^>]+>/g, '');
+        if (clean.length >= 2 && clean.length <= 15 && !/[：:，,。.！!？?、；;]/.test(clean) && !seen.has(clean)) {
+          seen.add(clean);
+          results.push(clean);
+        }
+      }
+    }
+  } catch (e) { console.warn('百度建议搜索失败', e); }
+
+  // 方式2：allorigins 代理百度搜索结果页（补充更多结果）
+  if (results.length < limit) {
+    try {
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent('https://www.baidu.com/s?wd=' + encodeURIComponent(query))}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const resp = await fetch(proxyUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (resp.ok) {
+        const data = await resp.json();
+        const html = data.contents || '';
+        // 提取百度搜索结果标题：<h3 class="t"><a ...>标题</a></h3>
+        const titleRegex = /<h3[^>]*class="[^"]*t[^"]*"[^>]*>[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>[\s\S]*?<\/h3>/g;
+        let match;
+        while ((match = titleRegex.exec(html)) !== null) {
+          let title = match[1].replace(/<[^>]+>/g, '').trim();
+          title = title.replace(/\s*[（(].*?[)）]\s*/g, '');
+          if (title.length >= 2 && title.length <= 15 && !/[：:，,。.！!？?、；;]/.test(title) && !seen.has(title)) {
+            seen.add(title);
+            results.push(title);
+          }
+          if (results.length >= limit) break;
+        }
+      }
+    } catch (e) { console.warn('百度结果页搜索失败', e); }
+  }
+
+  return results;
+}
+
+/* ===== 中文分词 ===== */
+function segmentText(text) {
+  const words = [];
+  if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+    try {
+      const seg = new Intl.Segmenter('zh-CN', { granularity: 'word' });
+      for (const s of seg.segment(text)) {
+        const w = s.segment.trim();
+        if (w && /[\u4e00-\u9fa5]/.test(w)) words.push(w);
+      }
+      return words;
+    } catch (e) {}
+  }
+  const cleaned = text.replace(/[^\u4e00-\u9fa5]/g, ' ');
+  for (const seg of cleaned.split(/\s+/).filter(Boolean)) {
+    for (let len = 2; len <= Math.min(4, seg.length); len++)
+      for (let i = 0; i <= seg.length - len; i++) words.push(seg.slice(i, i + len));
+  }
+  return words;
+}
+
+/* ===== 第四界面：文章拆解 ===== */
+let articleText = '';
+
+// 输入 tab 切换
+document.querySelectorAll('.input-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.input-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.input-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    $(`panel-${tab.dataset.tab}`).classList.add('active');
+  });
+});
+
+// 文件导入
+const fileDrop = $('fileDrop');
+const fileInput = $('fileInput');
+fileDrop.addEventListener('click', () => fileInput.click());
+fileDrop.addEventListener('dragover', (e) => { e.preventDefault(); fileDrop.classList.add('dragover'); });
+fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('dragover'));
+fileDrop.addEventListener('drop', (e) => {
+  e.preventDefault();
+  fileDrop.classList.remove('dragover');
+  if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files.length > 0) handleFile(e.target.files[0]);
+});
+
+function handleFile(file) {
+  if (!/\.(txt|md|text)$/i.test(file.name)) {
+    showToast('仅支持 .txt / .md 文件');
+    return;
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    showToast('文件大小不能超过 2MB');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    articleText = e.target.result;
+    $('fileName').textContent = `已加载：${file.name}（${articleText.length} 字）`;
+    updateAnalyzeBtn();
+  };
+  reader.onerror = () => showToast('文件读取失败（请确认是UTF-8编码文本文件）');
+  reader.readAsText(file, 'UTF-8');
+}
+
+// 粘贴文本
+$('pasteInput').addEventListener('input', () => {
+  articleText = $('pasteInput').value;
+  $('pasteCount').textContent = articleText.length;
+  updateAnalyzeBtn();
+});
+$('loadSampleBtn').addEventListener('click', () => {
+  $('pasteInput').value = SAMPLE_ARTICLE;
+  articleText = SAMPLE_ARTICLE;
+  $('pasteCount').textContent = SAMPLE_ARTICLE.length;
+  updateAnalyzeBtn();
+  // 切换到粘贴 tab
+  document.querySelector('.input-tab[data-tab="text"]').click();
+});
+$('clearPasteBtn').addEventListener('click', () => {
+  $('pasteInput').value = '';
+  articleText = '';
+  $('pasteCount').textContent = '0';
+  updateAnalyzeBtn();
+});
+
+// 链接解析
+$('fetchLinkBtn').addEventListener('click', async () => {
+  const url = $('linkInput').value.trim();
+  if (!url) { showToast('请输入链接'); return; }
+  const btn = $('fetchLinkBtn');
+  btn.disabled = true;
+  btn.textContent = '获取中…';
+  try {
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const resp = await fetch(proxyUrl);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    const html = data.contents || '';
+    // 提取正文文本
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    // 移除 script、style、nav、footer、header
+    doc.querySelectorAll('script,style,nav,footer,header,aside,noscript').forEach(el => el.remove());
+    let text = doc.body ? doc.body.innerText : '';
+    text = text.replace(/\s+/g, ' ').trim();
+    if (text.length < 50) throw new Error('内容过少');
+    articleText = text;
+    showToast(`已获取网页内容（${text.length} 字）`);
+    updateAnalyzeBtn();
+  } catch (err) {
+    console.error(err);
+    showToast('链接解析失败，请尝试粘贴文本');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '获取';
+  }
+});
+
+function updateAnalyzeBtn() {
+  $('analyzeBtn').disabled = articleText.trim().length < 50;
+}
+
+// 开始拆解
+$('analyzeBtn').addEventListener('click', async () => {
+  const fullText = articleText.trim();
+  if (fullText.length < 50) { showToast('内容至少 50 字'); return; }
+
+  const btn = $('analyzeBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>拆解中…';
+
+  // 限制处理长度：最多8000字，超出取前8000字（保证速度）
+  const text = fullText.length > 8000 ? fullText.slice(0, 8000) : fullText;
+  const truncated = fullText.length > 8000;
+
+  // 分词统计（同步执行，Intl.Segmenter 对8000字约100-300ms）
+  const freq = new Map();
+  for (const w of segmentText(text)) {
+    if (w.length < 2 || w.length > 12 || STOP_WORDS.has(w) || GENERIC_WORDS.has(w) || /^\d+$/.test(w)) continue;
+    freq.set(w, (freq.get(w) || 0) + 1);
+  }
+  const sorted = Array.from(freq.entries()).sort((a, b) => b[1] - a[1]);
+  const keywordCount = Math.min(10, Math.max(5, Math.floor(sorted.length * 0.08)));
+  const keywords = sorted.slice(0, keywordCount);
+
+  if (keywords.length === 0) {
+    showToast('未提取到有效词汇');
+    btn.disabled = false;
+    btn.textContent = '开始拆解';
+    return;
+  }
+
+  // 相关领域词汇：直接用内置词库匹配（不调用网络，速度快）
+  const related = findRelatedBuiltinWords(keywords.map(k => k[0]));
+
+  // 展示结果
+  $('keywordGrid').innerHTML = keywords.map(([w, f]) =>
+    `<span class="keyword-chip">${w}<span class="kf">${f}次</span></span>`
+  ).join('');
+  $('relatedWords').innerHTML = related.length > 0
+    ? related.map(w => `<span class="related-word">${w}</span>`).join('')
+    : '<span style="color:var(--text-muted);font-size:12px;">未匹配到相关领域词汇</span>';
+
+  articleData = { keywords: keywords.map(([word, freq]) => ({ word, freq })), related };
+  $('extractResult').style.display = '';
+
+  // 保存拆解记录
+  saveArticleRecord(text, articleData.keywords, related);
+
+  btn.disabled = false;
+  btn.textContent = '开始拆解';
+  const tip = truncated ? '（文本过长已截断至8000字）' : '';
+  showToast(`拆解完成：${keywords.length} 个关键词，${related.length} 个相关词汇${tip}`);
+});
+
+// 从内置词库中找相关词
+function findRelatedBuiltinWords(keywords) {
+  const scores = new Map();
+  for (const major in TOPICS) {
+    for (const sub in TOPICS[major]) {
+      for (const w of TOPICS[major][sub].words) {
+        let score = 0;
+        for (const kw of keywords) {
+          if (w.includes(kw) || kw.includes(w)) score += 3;
+          // 简单字符重叠
+          const common = [...new Set(w.split('').filter(c => kw.includes(c)))].length;
+          score += common * 0.5;
+        }
+        if (score > 0) scores.set(w, score);
+      }
+    }
+  }
+  return Array.from(scores.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 20)
+    .map(([w]) => w);
+}
+
+// 确认并生成词库
+$('confirmArticleBtn').addEventListener('click', () => {
+  if (!articleData) { showToast('请先完成拆解'); return; }
+  mode = 'article';
+  articleUsedWords = new Set();
+  // 进入文章词库加权模式
+  poolPhase = 'boost';
+  boostSource = 'article';
+  // 存入文章词库（去重）
+  const existingArticle = new Set(articleWords.map(a => a.word));
+  articleData.keywords.forEach(k => {
+    if (!existingArticle.has(k.word)) {
+      articleWords.push({ word: k.word, freq: k.freq, source: 'article' });
+    }
+  });
+  localStorage.setItem('wordGenArticleWords_v1', JSON.stringify(articleWords));
+  boostWords = articleData.keywords.map(k => ({ word: k.word, freq: k.freq }));
+  boostDrawCount = 0;
+  enterWordView();
+});
+
+/* ===== 历史记录 ===== */
+function saveHistory(word, source) {
+  const now = new Date();
+  const timeStr = `${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  if (history.length > 0 && history[0].word === word) return;
+  history.unshift({ word, source, time: timeStr });
+  if (history.length > 30) history = history.slice(0, 30);
+  localStorage.setItem('wordGenHistory_v4', JSON.stringify(history));
+  renderHomeHistory();
+}
+
+function renderHomeHistory() {
+  const box = $('homeHistory');
+  const tags = $('historyTags');
+  if (history.length === 0) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  tags.innerHTML = history.slice(0, 12).map(h =>
+    `<span class="history-tag">${h.word}<span class="ht-time">${h.time}</span></span>`
+  ).join('');
+}
+
+/* ===== 事件绑定 ===== */
+// 首页
+$('cardTopic').addEventListener('click', () => {
+  mode = 'topic';
+  currentMajor = null;
+  currentSub = null;
+  renderMajorGrid();
+  $('subSection').style.display = 'none';
+  $('topicRandomBtn').disabled = true;
+  showView('topic');
+});
+$('cardRandom').addEventListener('click', () => {
+  mode = 'all';
+  currentMajor = null;
+  currentSub = null;
+  enterWordView();
+});
+$('cardArticle').addEventListener('click', () => {
+  articleFrom = 'home';
+  articleText = '';
+  articleData = null;
+  $('fileName').textContent = '';
+  $('pasteInput').value = '';
+  $('pasteCount').textContent = '0';
+  $('linkInput').value = '';
+  $('extractResult').style.display = 'none';
+  updateAnalyzeBtn();
+  showView('article');
+});
+$('cardLibrary').addEventListener('click', () => {
+  libLevel = 'source';
+  libSource = null;
+  libMajor = null;
+  libSub = null;
+  libSearchText = '';
+  renderLibrary();
+  showView('library');
+});
+
+// 词库搜索
+$('libSearch').addEventListener('input', (e) => {
+  libSearchText = e.target.value.trim();
+  if (libLevel === 'words') renderLibWordList();
+});
+
+// 主题页
+document.querySelectorAll('[data-back="home"]').forEach(btn => {
+  btn.addEventListener('click', () => showView('home'));
+});
+document.querySelectorAll('[data-back="word"]').forEach(btn => {
+  btn.addEventListener('click', () => showView('word'));
+});
+document.querySelectorAll('[data-back="article"]').forEach(btn => {
+  btn.addEventListener('click', () => showView('article'));
+});
+$('topicRandomBtn').addEventListener('click', () => {
+  if (!currentMajor) { showToast('请先选择大主题'); return; }
+  enterWordView();
+});
+
+// 词汇页
+$('wordBackBtn').addEventListener('click', () => {
+  // 返回时重置加权词库状态
+  poolPhase = 'normal';
+  boostSource = null;
+  boostWords = [];
+  boostDrawCount = 0;
+  if (mode === 'article') showView('article');
+  else if (mode === 'all') showView('home');
+  else showView('topic');
+});
+$('nextBtn').addEventListener('click', pickRandomWord);
+$('onlineBtn').addEventListener('click', fetchOnlineWords);
+$('articleBtn').addEventListener('click', () => {
+  articleFrom = 'word';
+  articleText = '';
+  articleData = null;
+  $('fileName').textContent = '';
+  $('pasteInput').value = '';
+  $('pasteCount').textContent = '0';
+  $('linkInput').value = '';
+  $('extractResult').style.display = 'none';
+  updateAnalyzeBtn();
+  showView('article');
+});
+
+// 表达记录入口
+$('openRecordBtn').addEventListener('click', () => {
+  if (!currentWord) return;
+  $('recordWord').textContent = currentWord;
+  $('recordPath').textContent = getCurrentPath();
+  $('recordInput').value = '';
+  renderRecordLog('recordLogList', 'record');
+  showView('record');
+});
+
+// 思考题入口
+$('openThinkBtn').addEventListener('click', () => {
+  if (!currentWord) return;
+  $('thinkWord').textContent = currentWord;
+  $('thinkPath').textContent = getCurrentPath();
+  $('thinkInput').value = '';
+  generateThinkQuestions(currentWord);
+  renderRecordLog('thinkLogList', 'think');
+  showView('think');
+});
+
+// 换一批思考题
+$('thinkChangeBtn').addEventListener('click', () => {
+  if (currentWord) generateThinkQuestions(currentWord);
+});
+
+// 保存表达记录
+$('recordSubmitBtn').addEventListener('click', () => {
+  const content = $('recordInput').value.trim();
+  if (!content) { showToast('请先输入记录内容'); return; }
+  saveExpressionRecord('record', currentWord, content, null);
+  $('recordInput').value = '';
+  renderRecordLog('recordLogList', 'record');
+  showToast('记录已保存');
+});
+
+// 保存思考记录
+$('thinkSubmitBtn').addEventListener('click', () => {
+  const content = $('thinkInput').value.trim();
+  if (!content) { showToast('请先输入思考内容'); return; }
+  // 记录当前显示的第一道思考题作为关联问题
+  const question = currentThinkQuestions.length > 0 ? currentThinkQuestions[0] : null;
+  saveExpressionRecord('think', currentWord, content, question);
+  $('thinkInput').value = '';
+  renderRecordLog('thinkLogList', 'think');
+  showToast('思考已保存');
+});
+
+// 文章拆解返回按钮：根据来源决定返回哪里
+$('articleBackBtn').addEventListener('click', () => {
+  if (articleFrom === 'word') showView('word');
+  else showView('home');
+});
+
+// ===== 拆解词库记录 =====
+let articleRecords = JSON.parse(localStorage.getItem('wordGenArticleRecords_v1') || '[]');
+
+function saveArticleRecord(text, keywords, related) {
+  const now = new Date();
+  const timeStr = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const record = {
+    id: Date.now(),
+    time: timeStr,
+    summary: text.slice(0, 100),
+    keywords: keywords,
+    relatedCount: related.length
+  };
+  articleRecords.unshift(record);
+  if (articleRecords.length > 50) articleRecords = articleRecords.slice(0, 50);
+  localStorage.setItem('wordGenArticleRecords_v1', JSON.stringify(articleRecords));
+}
+
+function renderArticleRecords() {
+  const list = $('articleRecordsList');
+  if (articleRecords.length === 0) {
+    list.innerHTML = '<div class="lib-empty">暂无拆解记录</div>';
+    return;
+  }
+  list.innerHTML = articleRecords.map(r => `
+    <div class="ar-item">
+      <div class="ar-left">
+        <div class="ar-time">${r.time}</div>
+        <div class="ar-summary">${r.summary}…</div>
+        <div class="ar-kws">${r.keywords.slice(0,5).map(k => `<span class="ar-kw">${k.word}</span>`).join('')}${r.keywords.length > 5 ? `<span class="ar-kw" style="background:transparent;color:var(--text-muted);">+${r.keywords.length-5}</span>` : ''}</div>
+      </div>
+      <div class="ar-right">
+        <span class="ar-count">${r.keywords.length}词</span>
+        <button class="ar-del" data-ar-id="${r.id}">×</button>
+      </div>
+    </div>
+  `).join('');
+  list.querySelectorAll('.ar-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = parseInt(btn.dataset.arId);
+      articleRecords = articleRecords.filter(r => r.id !== id);
+      localStorage.setItem('wordGenArticleRecords_v1', JSON.stringify(articleRecords));
+      renderArticleRecords();
+      showToast('已删除记录');
+    });
+  });
+}
+
+$('articleRecordBtn').addEventListener('click', () => {
+  renderArticleRecords();
+  showView('article-records');
+});
+
+/* ===== 初始化 ===== */
+renderHomeHistory();
+
+</script>
+</body>
+</html>
